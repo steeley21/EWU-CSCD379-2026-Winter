@@ -85,7 +85,7 @@ gantt
 
 ---
 
-# How To Submit (Starting 5/4/23)
+# How To Submit
 
 ### Option 1: Start with the assignment branch
 
@@ -96,7 +96,7 @@ gantt
   - A link to your deployed website & API page
 - Your git diff should only show changes relevant to the assignment criteria, any changes outside of that will cause you to lose points for messy code
 
-### Option 2: Make a PR in your own repo
+### Option 2: Make a PR in your own repo (not ideal)
 
 - Branch from your own main and only make homework changes in that branch
 - If you want to make other changes, make them in main and merge them into your assignment branch before submitting your PR
