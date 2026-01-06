@@ -9,7 +9,7 @@ We will be using GitHub for all class lectures and assignments. All work will be
 * Please sign up for GitHub if you do not already have one. 
 * You can get added benefits by signing up for a free [GitHub Student Developer Pack](https://education.github.com/pack).
 * Sign up for GitHub Copilot Pro if you have not. [More Info](https://github.com/education/students)
-* **IMPORTANT** : Please fill out this **[form](https://docs.google.com/forms/d/e/1FAIpQLSdlpBMhof2gxL64vrqLg9o0Uc4di5lYejpo10XUBiMoyb-Xxg/viewform?usp=sf_link)** with your GitHub information. This is used by us so we can appropriately grade assignments.
+* **IMPORTANT** : Please fill out this **[form](https://docs.google.com/forms/d/e/1FAIpQLScpmX8qAHSPa55aq7uTXL6269IfhXZ6vwBo09r7fChHMuNogw/viewform?usp=header)** with your GitHub information. This is used by us so we can appropriately grade assignments.
 
 ## Prerequisites
 This class will build on CSCD-371. It won't be easy if you have not taken CSCD-371. We will be building on much of what was presented in that class. Here are the things the instructors will assume you already know in addition to all standard classes taken by juniors and seniors in the CS program as of Winter.
