@@ -1,0 +1,20 @@
+{
+    "name": "wordle-web",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "build": "nuxt build",
+        "dev": "nuxt dev",
+        "generate": "nuxt generate",
+        "preview": "nuxt preview",
+        "postinstall": "nuxt prepare"
+    },
+    "dependencies": {
+        "@mdi/font": "^7.4.47",
+        "nuxt": "^4.2.2",
+        "vue": "^3.5.26",
+        "vue-router": "^4.6.4",
+        "vuetify-nuxt-module": "^0.19.2"
+    },
+    "devDependencies": {}
+}
