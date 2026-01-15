@@ -26,6 +26,7 @@ The purpose of this assignment is to solidify your learning of:
 - Keep track of wins/losses
 - Invalid words should not be enter-able
 - Count wins, losses, and average attempts (words to win)
+- Create a hint generator! :D
 
 - Extra Credit: for cool features you implement
 
