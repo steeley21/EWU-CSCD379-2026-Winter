@@ -9,5 +9,13 @@ export default defineNuxtConfig({
     vuetify: {
 
     },
+    vite: {
+        server: {
+            host: 'localhost',
+            hmr: {
+                port: 24680
+            }
+        }
+    }
 })
 
