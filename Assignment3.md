@@ -46,6 +46,7 @@ Develop a game that doesn't already exist using your abilities augmented with AI
 **3. Deployment** ❌✅
 - The static web app needs to be deployed as a Azure Static App ❌✅
 - The API should be deployed to an Azure App Service ❌✅
+- There should be two GitHub Actions for deployment. One for the client web app and one for the API ❌✅
 - The logic for the API should be implemented as a service ❌✅
 - The database should be deployed to an Azure SQL database ❌✅
   - You can either use Azure auth or SQL auth ❌✅
