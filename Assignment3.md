@@ -3,21 +3,18 @@
 ## Assignment 3
 
 The purpose of this assignment is to solidify your learning of:
-- Creating an API and deploying it to Azure
-- Calling the API from the client using Axios
+- Creating an API and deploying it to an Azure App Service with an Azure SQL database
+- Calling the API from the client
 - Using Entity Framework to store data in SQL Server
 - Configuring SQL Server for localhost development and Azure
 - Entity Framework Migrations
-- Local storage
 
-## Feature
-Add leaderboard to the application
-- Allow the user to play a game
-- At the end of the game get a name via a dialog
-- Save the name in local storage so we don't have to ask again
-- Call an API to save the data
-- Create a Leaderboard page which displays the top 10 scores
-- Determine a good algorithm for sorting scores
+## General Guidance
+Develop a game that doesn't already exist using your abilities augmented with AI
+- When we developed Wordle, the AI already knew the rules of the game Wordle. This made it easier.
+- This game should be a new idea and not something that an AI could have trained on or could search for.
+- The game can be based on something existing, but needs to have a significant number of unique elements.
+- It should be small enough in scope but hit all the requirements.
 
 ## Turn in Process
 - On your fork, create an Assignment3 branch 
@@ -26,59 +23,41 @@ Add leaderboard to the application
 - Submit your pull request against Assignment3 in the class repo
 - Ask in Teams chat if you have questions or issues
 
-## Instructions
+## Requirements
 
-**1. Create a leaderboard API Controller** ❌✅
-- Create an endpoint that returns the top 10 scores (HttpGet) ❌✅
-  - Results should include Name, average guesses, and number of games played ❌✅
-- Create an endpoint that allows for posting a score (HttpPost) with data in the body ❌✅
-  - A new name should add a new record ❌✅
-  - An existing name should update that record ❌✅
-- Save and load all data with Entity Framework to an Azure SQL database or LocalDb for debugging ❌✅
-  - Class should be named "Player" and "Players" for the DbSet ❌✅
-  - Fields should be: 
-    - int PlayerId ❌✅
-    - string Name ❌✅
-    - int GameCount ❌✅
-    - double AverageAttempts ❌✅
-    - int AverageSecondsPerGame ❌✅(OPTIONAL)
-- The logic should reside in a service that is injected via dependency injection into the controller ❌✅
+**1. Create a client-side Nuxt game ** ❌✅
+- Is unique and not searchable on the internet  ❌✅
+- Has at least 3 pages that require navigation go get between ❌✅
+- Clear start, middle, and end (win/loss) ❌✅
+- Some sort of strategy or skill is involved and is not just random ❌✅
+- Works on desktop and mobile ❌✅
+- Has some need for a server side service ❌✅
+- Needs a custom favicon ❌✅
+- It should look good and feel like polished software ❌✅
+
+**2. Create a server-side API for the game** ❌✅
 - Set up CORS (Cross Origin Resource Sharing) ❌✅
+- At least one GET endpoint that returns an object ❌✅
+- At least one POST endpoint that accepts an object and returns as object ❌✅
+- Data from the POST should be stored to the database using Entity Framework ❌✅
+- Data for the GET should be pulled from the database ❌✅
+- All API should be async ❌✅
 
-**2. Create a dialog for getting the user's name** ❌✅
-- If we don't have the user's name, present the user with a dialog that allows them to type in their name ❌✅
-- The users current name should show on the game page (upper right) ❌✅
-  - This should be visible when setting/changing the name. It should change as the user types ❌✅
-- The user should be able to click on their name to change it (with the same dialog) ❌✅
-- Save the name in local storage and load it for the next game if it is set ❌✅
-- If the name is not set, display Guest as the name. ❌✅
-  - Clicking on this allows for preemptive setting of the name before the end of the game ❌✅
-- Dialog must be persistent, doesn't close by clicking off the dialog ❌✅
-
-**3. Save the Score and Seconds to complete** ❌✅
-- Save the score and time to complete in seconds at the end of the game if we have a name. ❌✅
-- If the user hasn't set a name, save the score and seconds as "Guest". (Be sure to prompt first) ❌✅
-- Save should be done with an Axios Post ❌✅
-
-**4. Create a Leaderboard Page** ❌✅
-- Create a /leaderboard page in the application that shows the top scores ❌✅
-- Use Axios to call the leaderboard API ❌✅
-- Make a nice display of the returned data ❌✅
-- Add a link on the front page to access the leaderboard ❌✅
-- Add a link to the app bar to access the leaderboard ❌✅
-
-**5. Unit testing** ❌✅ (OPTIONAL) (Not covered in class, but in instructor's repo: https://github.com/granterickson/EWU-CSCD379-2026-Winter)
-- Tests for the service ❌✅ (OPTIONAL)
-- Integration tests for the controller ❌✅ (OPTIONAL)
-
-**6. Deploy site to Azure** ❌✅
-- Deploy API site with Github Action to Azure Web App ❌✅
+**3. Deployment** ❌✅
+- The static web app needs to be deployed as a Azure Static App ❌✅
+- The API should be deployed to an Azure App Service ❌✅
+- The logic for the API should be implemented as a service ❌✅
+- The database should be deployed to an Azure SQL database ❌✅
+  - You can either use Azure auth or SQL auth ❌✅
+  - Make sure to set network permissions correctly ❌✅
 - Unit Tests should run on build ❌✅
 
+**4. Unit testing** ❌✅ 
+- Tests for the service ❌✅
+- Integration tests for the controller ❌✅
+- Basic clientside unit tests ❌✅
 
 ## Extra Credit
-
-- Unit testing on the client side (3) ❌✅
-- Animate the leaderboard (3) ❌✅
-- Create a logo (3) ❌✅
-- Add Average Seconds to win in score (3) ❌✅
+- Add cool animations ❌✅ 
+- Create a hip logo (3) ❌✅
+- Have several people play the game and provide a place where people can put testimonials ❌✅
