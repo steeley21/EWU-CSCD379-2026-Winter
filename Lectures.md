@@ -9,7 +9,7 @@
 
 ## Week 1
 
-### Lecture 1: 1/6: Build the App (Assignment 1) 🟢🟣
+### Lecture 1: 1/6: Build the App (Assignment 1) 🟢
 
 - Syllabus & expectations
 - Wordle Requirements
@@ -30,24 +30,11 @@
 ### Lecture 2: 1/8: Deployment (Assignment 1) 🟢
 
 - AI Discussion
-- Complete application
+- Complete basic Wordle application
 
 ## Week 2
 
-## TO DO
-
-- Classes in C#/Java and TS/JS
-- Basic unit testing with Jest
-  - Add testing: `npm i --save-dev @nuxt/test-utils vitest @vue/test-utils happy-dom playwright-core`
-- Build deployment for front-end in Azure.
-- Azure DevOps
-- YAML
-- Azure AppService
-- Vue Build / `npm run generate`
-- Vuetify
-  - `https://nuxt.com/modules/vuetify`
-  - `https://www.codybontecou.com/how-to-use-vuetify-with-nuxt-3.html`
-
+### Lecture 3: DotNet Conf
 
 
 ### Lecture 3: 1/13: Vue (Assignment 2) 🟢🟣
@@ -73,35 +60,17 @@
 ### Lecture 4. 1/15: More Vue (Assignment 2) 🟢🟣
 
 - Add Additional Wordle Functionality
-  - Word list
-  - Random word selection
-  - Showing all 6 guess lines
-  - Entering letters not in a text box
-  - Determine win & loss
-  - Game state
-  - Restart game
-- Attributes
-- Observables
-- Proxies
-- Functions
-- Conditional Rendering: https://vuejs.org/guide/essentials/conditional.html
-- Events: https://vuejs.org/guide/essentials/event-handling.html
-- Spacing (padding and margins) (CSS Box Model)
+
 
 ## Week 3
 
 ### Lecture 5. 1/20: Vue Components (Assignment 2) 🟣
 
-- Components: https://vuejs.org/guide/components/registration.html
-  - Props https://vuejs.org/guide/components/props.html
-  - Events https://vuejs.org/guide/components/events.html
-  - v-model https://vuejs.org/guide/components/v-model.html
-  - Slots https://vuejs.org/guide/components/slots.html
-- Watchers: https://vuejs.org/guide/essentials/watchers.html
-- Transitions: https://vuejs.org/guide/built-ins/transition.html
+- Watch the video and find out
 
-### Lecture 6. 1/22: More components 🟣
+### Lecture 6. 1/22: 🟣
 
+- Components
 - Grid System
 - Display and sizing
 - Icons
@@ -119,6 +88,17 @@
 
 ### Lecture 7. 1/27: Wrap up UI and ASP.NET Intro 🟢🟣
 
+- Review assignments turned in on Sunday
+- Provide feedback
+- Discussion of what APIs are for and how they work
+- Build an initial .NET API app
+
+### Lecture 8. 1/29: EF and API Deployment
+
+
+
+### Other stuff
+ 
 - Input: https://vuejs.org/guide/essentials/forms.html
 - Components: Tables
 - Components: Form Inputs
