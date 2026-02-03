@@ -20,11 +20,14 @@ export type HivefallState = {
   moveCount: number
   fight: FightState
 
+  infectedCount: number 
+
   // spawn pacing
   currentSpawnInterval: number
   movesSinceLastSpawn: number
   nextEnemyId: number
 }
+
 
 export type StepOptions = {
   rng?: () => number
@@ -62,11 +65,14 @@ export function createInitialState(rules: HivefallRules): HivefallState {
     moveCount: 0,
     fight: null,
 
+    infectedCount: 0, 
+
     currentSpawnInterval: rules.firstSpawnAfterMoves,
     movesSinceLastSpawn: 0,
     nextEnemyId: 1,
   }
 }
+
 
 /**
  * Applies one "turn" (player move attempt).
@@ -199,13 +205,11 @@ export function step(
       rules.cols,
       (p) =>
         samePos(p, nextState.playerPos) ||
-        !!isOccupiedByEnemy(enemies, p)
-        // Optional terrain block check when you add terrain:
-        // || isCellBlockedForMovement(grid3[p.row][p.col])
-      ,
+        !!isOccupiedByEnemy(enemies, p),
       rng,
       50
     )
+
 
     if (pos) {
       const grid4 = cloneGrid(grid3)
@@ -213,8 +217,14 @@ export function step(
       grid3 = grid4
 
       enemies = [...enemies, { id: nextEnemyId++, pos }]
-      interval = accelerateAfterSpawn(interval, 1)
-      // movesSince already reset by advanceSpawnPacing when shouldSpawn = true
+      const spawnedTotal = nextEnemyId - 1
+
+      interval = accelerateAfterSpawn(interval, spawnedTotal, {
+        minInterval: rules.spawnPacing.minInterval,
+        decreaseEverySpawns: rules.spawnPacing.decreaseEverySpawns,
+        step: rules.spawnPacing.step
+      })
+
     }
   }
 
@@ -228,6 +238,33 @@ export function step(
   }
 }
 
+export type FightAction = 'attack' | 'run'
+
+export function resolveFight(
+  state: HivefallState,
+  action: FightAction
+): HivefallState {
+  if (!state.fight) return state
+
+  // "Run" for now just dismisses the fight state.
+  if (action === 'run') return clearFight(state)
+
+  // Attack = convert this enemy to infected, remove it from active enemies
+  const enemyId = state.fight.enemyId
+  const enemy = state.enemies.find(e => e.id === enemyId)
+  if (!enemy) return clearFight(state)
+
+  const g = cloneGrid(state.grid)
+  setEntity(g, enemy.pos, 'infected')
+
+  return {
+    ...state,
+    grid: g,
+    enemies: state.enemies.filter(e => e.id !== enemyId),
+    infectedCount: state.infectedCount + 1,
+    fight: null,
+  }
+}
 
 export function clearFight(state: HivefallState): HivefallState {
   if (!state.fight) return state

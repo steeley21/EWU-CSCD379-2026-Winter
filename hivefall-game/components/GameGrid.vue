@@ -56,7 +56,7 @@ const props = withDefaults(defineProps<Props>(), {
   cellSizePx: 24,
   gapPx: 2,
   playerChar: '☻',
-  infectedChar: '☻',
+  infectedChar: '☺',
   enemyChar: 'E',
   resourceChar: '*',
   terrainGlyphs: () => ({

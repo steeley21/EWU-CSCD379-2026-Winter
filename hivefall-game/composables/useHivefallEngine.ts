@@ -1,8 +1,15 @@
 // composables/useHivefallEngine.ts
 import { computed, ref } from 'vue'
 import { mergeHivefallRules, type HivefallRules } from '../game/hivefallRules'
-import { clearFight as clearFightPure, createInitialState, step, type MoveDir } from '../game/engine'
+import {
+  clearFight as clearFightPure,
+  createInitialState,
+  step,
+  resolveFight as resolveFightPure,
+  type MoveDir,
+} from '../game/engine'
 import type { HivefallState } from '../game/engine'
+
 
 export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
   const rules = mergeHivefallRules(overrides)
@@ -27,6 +34,11 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
     state.value = step(state.value, rules, dir)
   }
 
+  function resolveFight(action: 'attack' | 'run'): void {
+    state.value = resolveFightPure(state.value, action)
+  }
+
+
   return {
     rows: rules.rows,
     cols: rules.cols,
@@ -39,6 +51,7 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
 
     reset,
     clearFight,
+    resolveFight, 
 
     moveUp: () => doStep('up'),
     moveDown: () => doStep('down'),

@@ -10,11 +10,6 @@ export type SpawnPacingResult = {
   shouldSpawn: boolean
 }
 
-/**
- * Advances spawn pacing by 1 successful player move.
- * - increments movesSinceLastSpawn
- * - if movesSinceLastSpawn >= currentInterval => shouldSpawn = true and counter resets to 0
- */
 export function advanceSpawnPacing(p: SpawnPacingState): SpawnPacingResult {
   const moves = p.movesSinceLastSpawn + 1
 
@@ -37,10 +32,30 @@ export function advanceSpawnPacing(p: SpawnPacingState): SpawnPacingResult {
   }
 }
 
+export type AccelerateOptions = {
+  minInterval?: number
+  decreaseEverySpawns?: number
+  step?: number
+}
+
 /**
- * After a spawn succeeds, reduce interval (accelerate spawning).
- * Example: 5 -> 4 -> 3 -> 2 -> 1 -> 1...
+ * After a spawn succeeds, optionally reduce interval (accelerate spawning).
+ * Slowing knobs:
+ * - decreaseEverySpawns: only decrease every N spawns (ex: 2)
+ * - minInterval: cap how fast it can get (ex: 2 means "spawn at most every 2 moves")
  */
-export function accelerateAfterSpawn(currentInterval: number, minInterval = 1): number {
-  return Math.max(minInterval, currentInterval - 1)
+export function accelerateAfterSpawn(
+  currentInterval: number,
+  spawnedTotal: number,
+  opts: AccelerateOptions = {}
+): number {
+  const minInterval = opts.minInterval ?? 1
+  const every = opts.decreaseEverySpawns ?? 1
+  const step = opts.step ?? 1
+
+  if (every <= 1) return Math.max(minInterval, currentInterval - step)
+
+  if (spawnedTotal % every !== 0) return currentInterval
+
+  return Math.max(minInterval, currentInterval - step)
 }
