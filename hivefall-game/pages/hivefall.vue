@@ -71,6 +71,7 @@
 import { computed, onMounted, onBeforeUnmount } from 'vue'
 import { useDisplay } from 'vuetify'
 
+
 import GameGrid from '../components/GameGrid.vue'
 import DPad from '../components/DPad.vue'
 import FightDialog from '../components/FightDialog.vue'
