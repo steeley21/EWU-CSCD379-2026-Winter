@@ -19,20 +19,20 @@ jobs:
         with:
           submodules: true
           lfs: false
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_CLIFF_07B9AA10F }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "hivefall-game" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: ".output/public" # Built app content directory - optional
-          app_build_command: "npm ci && npm run test:ci && npm run generate"
-          ###### End of Repository/Build Configurations ######
+          production_branch: "Assigment3"
+          app_location: "hivefall-game"
+          api_location: ""
+          output_location: ".output/public"
+          app_build_command: "npm ci && npx nuxi prepare && npm run test:ci && npm run generate"
+
                     
 
 
@@ -45,8 +45,11 @@ jobs:
         id: closepullrequest
         uses: Azure/static-web-apps-deploy@v1
         with:
+          production_branch: "Assigment3"
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_CLIFF_07B9AA10F }}
           action: "close"
+          app_location: "hivefall-game"
+          
 
 
 
