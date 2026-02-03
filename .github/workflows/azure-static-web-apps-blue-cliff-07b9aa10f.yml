@@ -20,7 +20,7 @@ jobs:
         with:
           submodules: true
           lfs: false
-          
+
       - name: Debug branch + sha
         run: |
           echo "GITHUB_REF=$GITHUB_REF"
@@ -37,7 +37,7 @@ jobs:
           app_location: "hivefall-game"
           api_location: ""
           output_location: ".output/public"
-          app_build_command: "npm ci && npx nuxi prepare && npm run test:ci && npm run generate"
+          app_build_command: "npm ci && npx nuxi prepare && npm run test:ci && npm run generate && echo $GITHUB_SHA > .output/public/build.txt"
 
                     
 
