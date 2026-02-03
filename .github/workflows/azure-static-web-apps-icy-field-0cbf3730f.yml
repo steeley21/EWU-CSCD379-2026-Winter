@@ -4,10 +4,8 @@ on:
   push:
     branches:
       - Assigment3
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches:
-      - Assigment3
+  workflow_dispatch:
+  
 
 jobs:
   build_and_deploy_job:
@@ -44,6 +42,7 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_FIELD_0CBF3730F }}
           action: "close"
+
 
 
 
