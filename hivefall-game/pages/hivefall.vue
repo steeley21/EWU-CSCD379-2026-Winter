@@ -40,10 +40,15 @@
       :max-hp="playerMaxHp"
       :infected="infectedCount"
       :max-enemies="maxEnemies"
+      :enemy-hp="fightEnemyHp"
+      :enemy-max-hp="fightEnemyMaxHp"
+      :player-dmg="rules.combat.playerHitDamage"
+      :enemy-dmg="rules.combat.enemyHitDamage"
+      :enemy-hit-interval-ms="rules.combat.enemyHitIntervalMs"
       @attack="onAttack"
       @run="onRun"
-      @close="onCloseFight"
     />
+
 
 
     <v-dialog :model-value="gameOver" max-width="420" persistent>
@@ -98,6 +103,7 @@ const PAGE_PAD = 16
 const availableH = computed(() => Math.max(240, height.value - HEADER_H - PAGE_PAD))
 
 
+
 const dpadBtnPx = computed(() => {
   const candidate = Math.floor((availableH.value - 2 * dpadPadPx.value - 2 * dpadGapPx.value) / 3)
   return Math.max(34, Math.min(52, candidate))
@@ -113,26 +119,29 @@ const gridAvailableH = computed(() => {
 const gridAvailableW = computed(() => {
   return stacked.value
   ? Math.max(320, width.value - 32)
-    : Math.max(320, width.value - dpadW.value - 48)
-  })
-  
-  const cellSizePx = computed(() => {
-    const byW = Math.floor((gridAvailableW.value - (COLS - 1) * gridGapPx.value) / COLS)
-    const byH = Math.floor((gridAvailableH.value - (ROWS - 1) * gridGapPx.value) / ROWS)
-    return Math.max(10, Math.min(24, Math.min(byW, byH)))
-  })
-  
-  const { resetFn, giveUpFn } = useHivefallHeaderActions()
-  
-  const {
-    grid, reset,
-    moveUp, moveDown, moveLeft, moveRight,
-    fight, clearFight, resolveFight,
-    status, giveUp,
-    moveCount, infectedCount,
-    playerHp, playerMaxHp, maxEnemies, 
-  } = useHivefallEngine({ rows: ROWS, cols: COLS, terrain: '.' })
+  : Math.max(320, width.value - dpadW.value - 48)
+})
 
+const cellSizePx = computed(() => {
+  const byW = Math.floor((gridAvailableW.value - (COLS - 1) * gridGapPx.value) / COLS)
+  const byH = Math.floor((gridAvailableH.value - (ROWS - 1) * gridGapPx.value) / ROWS)
+  return Math.max(10, Math.min(24, Math.min(byW, byH)))
+})
+
+const { resetFn, giveUpFn } = useHivefallHeaderActions()
+
+const {
+  rules,
+  grid, reset,
+  moveUp, moveDown, moveLeft, moveRight,
+  fight, clearFight, resolveFight,
+  status, giveUp,
+  moveCount, infectedCount,
+  playerHp, playerMaxHp, maxEnemies, 
+} = useHivefallEngine({ rows: ROWS, cols: COLS, terrain: '.' })
+
+const fightEnemyHp = computed(() => fight.value?.enemyHp ?? 0)
+const fightEnemyMaxHp = computed(() => fight.value?.enemyMaxHp ?? 0)
 
 const gameOver = computed(() => status.value !== 'playing')
 
@@ -177,10 +186,6 @@ function onAttack(): void {
 function onRun(): void {
   resolveFight('run')
   console.log('run invoked')
-}
-
-function onCloseFight(): void {
-  clearFight()
 }
 
 function onCellClick(payload: { row: number; col: number; cell: GameCell }): void {

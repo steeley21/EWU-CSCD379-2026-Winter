@@ -7,6 +7,13 @@ export type SpawnPacingRules = {
   step: number
 }
 
+export type CombatRules = {
+  enemyMaxHp: number
+  playerHitDamage: number
+  enemyHitDamage: number
+  enemyHitIntervalMs: number
+}
+
 export type HivefallRules = {
   rows: number
   cols: number
@@ -18,7 +25,7 @@ export type HivefallRules = {
   spawnPacing: SpawnPacingRules
 
   playerMaxHp: number
-  damagePerFight: number
+  combat: CombatRules
 }
 
 export const defaultHivefallRules: HivefallRules = {
@@ -36,7 +43,13 @@ export const defaultHivefallRules: HivefallRules = {
   },
 
   playerMaxHp: 20,
-  damagePerFight: 1,
+
+  combat: {
+    enemyMaxHp: 5,
+    playerHitDamage: 1,
+    enemyHitDamage: 2,
+    enemyHitIntervalMs: 1500,
+  },
 }
 
 export function mergeHivefallRules(overrides: Partial<HivefallRules> = {}): HivefallRules {
@@ -46,6 +59,10 @@ export function mergeHivefallRules(overrides: Partial<HivefallRules> = {}): Hive
     spawnPacing: {
       ...defaultHivefallRules.spawnPacing,
       ...(overrides.spawnPacing ?? {}),
+    },
+    combat: {
+      ...defaultHivefallRules.combat,
+      ...(overrides.combat ?? {}),
     },
   }
 }

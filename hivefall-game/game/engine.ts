@@ -2,7 +2,8 @@
 import { createEmptyGrid } from '../types/game'
 import type { GameCell } from '../types/game'
 import type { HivefallRules } from './hivefallRules'
-import type { Enemy, FightState, GridPos } from './hivefallTypes'
+import type { Enemy, GridPos, HivefallState } from './hivefallTypes'
+import { startFight, playerHit, runFromFight, enemyHitTick } from './combat'
 import { findEdgeSpawnPos } from './spawn'
 import { nextEnemyStepToward } from './enemyAi'
 import { advanceSpawnPacing, accelerateAfterSpawn } from './pacing'
@@ -12,26 +13,6 @@ import type { MoveDir } from './movement'
 export type { MoveDir } from './movement'
 
 import { resolveEnemyEnterTile, resolvePlayerEnterTile } from './collision'
-
-export type GameStatus = 'playing' | 'won' | 'lost'
-
-export type HivefallState = {
-  grid: GameCell[][]
-  playerPos: GridPos
-  enemies: Enemy[]
-  moveCount: number
-  fight: FightState
-
-  infectedCount: number
-
-  status: GameStatus
-  playerHp: number
-
-  currentSpawnInterval: number
-  movesSinceLastSpawn: number
-  nextEnemyId: number
-}
-
 
 
 export type StepOptions = {
@@ -116,7 +97,7 @@ export function step(
   if (playerCollision.kind === 'blocked') return state
 
   if (playerCollision.kind === 'fight') {
-    return { ...state, fight: { enemyId: playerCollision.enemyId } }
+    return startFightEvaluated(state, rules, playerCollision.enemyId)
   }
 
   // --- apply player move ---
@@ -159,15 +140,15 @@ export function step(
       const enemyCollision = resolveEnemyEnterTile(grid2, nextState.playerPos, e.id, proposed)
 
       if (enemyCollision.kind === 'fight') {
-        // Trigger fight and stop processing further enemies (keep board stable).
-        nextState = { ...nextState, fight: { enemyId: e.id } }
+        const fightState = startFightEvaluated(nextState, rules, e.id)
 
         updated.push(e)
         for (let j = i + 1; j < nextState.enemies.length; j++) updated.push(nextState.enemies[j])
 
-        nextState = { ...nextState, enemies: updated, grid: grid2 }
+        nextState = { ...fightState, enemies: updated, grid: grid2 }
         return
       }
+
 
       if (enemyCollision.kind === 'blocked') {
         // Treat as no move
@@ -209,8 +190,8 @@ export function step(
   let grid3 = nextState.grid
   let nextEnemyId = nextState.nextEnemyId
 
-  const spawnedSoFar = nextEnemyId - 1
-  if (pacing.shouldSpawn && spawnedSoFar < rules.maxEnemies) {
+  const spawnedTotalBeforeThisTurn = nextEnemyId - 1
+  if (pacing.shouldSpawn && spawnedTotalBeforeThisTurn < rules.maxEnemies) {
     const rng = opts.rng ?? Math.random
 
     const pos = findEdgeSpawnPos(
@@ -230,9 +211,9 @@ export function step(
       grid3 = grid4
 
       enemies = [...enemies, { id: nextEnemyId++, pos }]
-      const spawnedTotal = nextEnemyId - 1
+      const spawnedTotalAfterThisSpawn = nextEnemyId - 1
 
-      interval = accelerateAfterSpawn(interval, spawnedTotal, {
+      interval = accelerateAfterSpawn(interval, spawnedTotalAfterThisSpawn, {
         minInterval: rules.spawnPacing.minInterval,
         decreaseEverySpawns: rules.spawnPacing.decreaseEverySpawns,
         step: rules.spawnPacing.step
@@ -254,6 +235,9 @@ export function step(
   )
 }
 
+function startFightEvaluated(state: HivefallState, rules: HivefallRules, enemyId: number): HivefallState {
+  return evaluateEndState(startFight(state, rules, enemyId), rules)
+}
 
 function evaluateEndState(state: HivefallState, rules: HivefallRules): HivefallState {
   if (state.status !== 'playing') return state
@@ -273,7 +257,6 @@ function evaluateEndState(state: HivefallState, rules: HivefallRules): HivefallS
   return state
 }
 
-
 export type FightAction = 'attack' | 'run'
 
 export function resolveFight(
@@ -284,36 +267,13 @@ export function resolveFight(
   if (state.status !== 'playing') return state
   if (!state.fight) return state
 
-  const damage = rules.damagePerFight
-
-  // Run = take damage, dismiss fight (enemy stays)
-  if (action === 'run') {
-    const next = { ...state, playerHp: state.playerHp - damage, fight: null }
-    return evaluateEndState(next, rules)
-  }
-
-  // Attack = convert enemy, remove from enemies, take damage, clear fight
-  const enemyId = state.fight.enemyId
-  const enemy = state.enemies.find(e => e.id === enemyId)
-  if (!enemy) {
-    const next = { ...state, playerHp: state.playerHp - damage, fight: null }
-    return evaluateEndState(next, rules)
-  }
-
-  const g = cloneGrid(state.grid)
-  setEntity(g, enemy.pos, 'infected')
-
-  const next: HivefallState = {
-    ...state,
-    grid: g,
-    enemies: state.enemies.filter(e => e.id !== enemyId),
-    infectedCount: state.infectedCount + 1,
-    playerHp: state.playerHp - damage,
-    fight: null,
-  }
+  const next = action === 'run'
+    ? runFromFight(state)
+    : playerHit(state, rules)
 
   return evaluateEndState(next, rules)
 }
+
 
 export function giveUp(state: HivefallState): HivefallState {
   if (state.status !== 'playing') return state
@@ -324,3 +284,9 @@ export function clearFight(state: HivefallState): HivefallState {
   if (!state.fight) return state
   return { ...state, fight: null }
 }
+
+export function tickEnemyHit(state: HivefallState, rules: HivefallRules): HivefallState {
+  const next = enemyHitTick(state, rules)
+  return evaluateEndState(next, rules)
+}
+
