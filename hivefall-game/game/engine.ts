@@ -7,6 +7,11 @@ import { findEdgeSpawnPos } from './spawn'
 import { nextEnemyStepToward } from './enemyAi'
 import { advanceSpawnPacing, accelerateAfterSpawn } from './pacing'
 
+import { attemptMove } from './movement'
+import type { MoveDir } from './movement'
+export type { MoveDir } from './movement'
+
+import { resolveEnemyEnterTile, resolvePlayerEnterTile } from './collision'
 
 export type HivefallState = {
   grid: GameCell[][]
@@ -20,8 +25,6 @@ export type HivefallState = {
   movesSinceLastSpawn: number
   nextEnemyId: number
 }
-
-export type MoveDir = 'up' | 'down' | 'left' | 'right'
 
 export type StepOptions = {
   rng?: () => number
@@ -37,19 +40,6 @@ function samePos(a: GridPos, b: GridPos): boolean {
 
 function centerPos(rows: number, cols: number): GridPos {
   return { row: Math.floor(rows / 2), col: Math.floor(cols / 2) }
-}
-
-function dirDelta(dir: MoveDir): { dr: number; dc: number } {
-  switch (dir) {
-    case 'up': return { dr: -1, dc: 0 }
-    case 'down': return { dr: 1, dc: 0 }
-    case 'left': return { dr: 0, dc: -1 }
-    case 'right': return { dr: 0, dc: 1 }
-  }
-}
-
-function inBounds(p: GridPos, rows: number, cols: number): boolean {
-  return p.row >= 0 && p.row < rows && p.col >= 0 && p.col < cols
 }
 
 function setEntity(g: GameCell[][], p: GridPos, entity: GameCell['entity']): void {
@@ -93,24 +83,27 @@ export function step(
   dir: MoveDir,
   opts: StepOptions = {}
 ): HivefallState {
+  // If we're in a fight state, freeze world progression.
   if (state.fight) return state
 
-  const { dr, dc } = dirDelta(dir)
-  const from = state.playerPos
-  const to: GridPos = { row: from.row + dr, col: from.col + dc }
+  // --- player movement (bounds) ---
+  const move = attemptMove(state.playerPos, dir, rules.rows, rules.cols)
+  if (!move.ok) return state
 
-  // invalid move: no turn advance
-  if (!inBounds(to, rules.rows, rules.cols)) return state
+  const to = move.to
 
-  // moving into enemy triggers fight: no movement, no turn advance
-  const enemyOnTo = isOccupiedByEnemy(state.enemies, to)
-  if (enemyOnTo) {
-    return { ...state, fight: { enemyId: enemyOnTo.id } }
+  // --- player collision (terrain/enemy/resources later) ---
+  const playerCollision = resolvePlayerEnterTile(state.grid, state.enemies, to)
+
+  if (playerCollision.kind === 'blocked') return state
+
+  if (playerCollision.kind === 'fight') {
+    return { ...state, fight: { enemyId: playerCollision.enemyId } }
   }
 
-  // --- apply player movement ---
+  // --- apply player move ---
   let g = cloneGrid(state.grid)
-  setEntity(g, from, null)
+  setEntity(g, state.playerPos, null)
   setEntity(g, to, 'player')
 
   let nextState: HivefallState = {
@@ -126,8 +119,7 @@ export function step(
 
     let grid2 = cloneGrid(nextState.grid)
 
-    // Track occupied positions to prevent stacking.
-    // Use string keys to keep it pure & simple.
+    // Prevent enemy stacking by tracking occupied cells as we move enemies.
     const occupied = new Set(nextState.enemies.map(e => `${e.pos.row},${e.pos.col}`))
 
     const updated: Enemy[] = []
@@ -135,31 +127,43 @@ export function step(
     for (let i = 0; i < nextState.enemies.length; i++) {
       const e = nextState.enemies[i]
 
-      const isBlocked = (p: GridPos) => occupied.has(`${p.row},${p.col}`)
+      const isBlockedByEnemy = (p: GridPos) => occupied.has(`${p.row},${p.col}`)
 
-      const proposed = nextEnemyStepToward(e.pos, nextState.playerPos, rules.rows, rules.cols, isBlocked)
+      const proposed = nextEnemyStepToward(
+        e.pos,
+        nextState.playerPos,
+        rules.rows,
+        rules.cols,
+        isBlockedByEnemy
+      )
 
-      // collision with player triggers fight; stop processing further enemies
-      if (samePos(proposed, nextState.playerPos)) {
+      // Collision resolution (terrain + player collision)
+      const enemyCollision = resolveEnemyEnterTile(grid2, nextState.playerPos, e.id, proposed)
+
+      if (enemyCollision.kind === 'fight') {
+        // Trigger fight and stop processing further enemies (keep board stable).
         nextState = { ...nextState, fight: { enemyId: e.id } }
 
-        // keep current enemy where it was (visual stability)
         updated.push(e)
-
-        // remaining enemies unchanged
         for (let j = i + 1; j < nextState.enemies.length; j++) updated.push(nextState.enemies[j])
 
         nextState = { ...nextState, enemies: updated, grid: grid2 }
         return
       }
 
-      // no move
+      if (enemyCollision.kind === 'blocked') {
+        // Treat as no move
+        updated.push(e)
+        continue
+      }
+
+      // No move
       if (samePos(proposed, e.pos)) {
         updated.push(e)
         continue
       }
 
-      // move enemy
+      // Move enemy
       occupied.delete(`${e.pos.row},${e.pos.col}`)
       occupied.add(`${proposed.row},${proposed.col}`)
 
@@ -172,10 +176,10 @@ export function step(
     nextState = { ...nextState, enemies: updated, grid: grid2 }
   })()
 
-  // If fight triggered during enemy movement, do not advance spawn pacing
+  // If fight triggered during enemy movement, do not advance spawn pacing/spawn.
   if (nextState.fight) return nextState
 
-    // --- spawn pacing (successful player moves only) ---
+  // --- spawn pacing (successful player moves only) ---
   const pacing = advanceSpawnPacing({
     currentInterval: nextState.currentSpawnInterval,
     movesSinceLastSpawn: nextState.movesSinceLastSpawn,
@@ -193,7 +197,12 @@ export function step(
     const pos = findEdgeSpawnPos(
       rules.rows,
       rules.cols,
-      (p) => samePos(p, nextState.playerPos) || !!isOccupiedByEnemy(enemies, p),
+      (p) =>
+        samePos(p, nextState.playerPos) ||
+        !!isOccupiedByEnemy(enemies, p)
+        // Optional terrain block check when you add terrain:
+        // || isCellBlockedForMovement(grid3[p.row][p.col])
+      ,
       rng,
       50
     )
@@ -205,10 +214,7 @@ export function step(
 
       enemies = [...enemies, { id: nextEnemyId++, pos }]
       interval = accelerateAfterSpawn(interval, 1)
-      // movesSince already reset by advanceSpawnPacing() when shouldSpawn = true
-    } else {
-      // spawn failed: keep interval the same, but counter already reset in our pacing rule
-      // that's fine for now; if you want "failed spawn doesn't reset", we can tweak pacing later
+      // movesSince already reset by advanceSpawnPacing when shouldSpawn = true
     }
   }
 
@@ -221,6 +227,7 @@ export function step(
     nextEnemyId,
   }
 }
+
 
 export function clearFight(state: HivefallState): HivefallState {
   if (!state.fight) return state
