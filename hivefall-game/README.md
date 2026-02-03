@@ -8,6 +8,8 @@ Deployment: https://blue-cliff-07b9aa10f.4.azurestaticapps.net/
 
 ---
 
+
+
 ## Current game state (what works now)
 
 ### Player + grid
