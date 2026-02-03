@@ -3,6 +3,9 @@
 A small **ASCII-grid** turn-based game where you play as **Smiley (☻)** on a **24×14** board.  
 Each successful move advances the world: **enemies spawn from the edge and chase you**. When you collide with an enemy, a **fight dialog** appears where you can **Attack** (infect) or **Run**.
 
+
+Deployment: https://blue-cliff-07b9aa10f.4.azurestaticapps.net/
+
 ---
 
 ## Current game state (what works now)
