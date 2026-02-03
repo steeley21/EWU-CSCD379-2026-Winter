@@ -7,63 +7,39 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build_and_deploy_job:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
-
+    name: Build and Deploy Job
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js version
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v3
         with:
-          node-version: '20.x'
-
-      - name: install dependencies
-        working-directory: ./hivefall-game
-        run: npm ci
-
-      - name: Build Vue app
-        working-directory: ./hivefall-game
-        run: npm run generate
-
-      - name: Copy startup script
-        run: cp ./hivefall-game/startup.sh ./hivefall-game/.output/public/
-        
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
+          submodules: true
+          lfs: false
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
         with:
-          name: node-app
-          path: ./hivefall-game/.output/public
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_FIELD_0CBF3730F }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          action: "upload"
+          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
+          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
+          app_location: "./hivefall-game" # App source code path
+          api_location: "./hivefall-game/api" # Api source code path - optional
+          output_location: "./hivefall-game/.output/public" # Built app content directory - optional
+          ###### End of Repository/Build Configurations ######
 
-  deploy:
+
+
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
-
+    name: Close Pull Request Job
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
+      - name: Close Pull Request
+        id: closepullrequest
+        uses: Azure/static-web-apps-deploy@v1
         with:
-          name: node-app
-      
-      - name: 'Deploy to Azure Web App'
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'hivefall-game'
-          publish-profile: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_FIELD_0CBF3730F }}
-          package: .
-
-
-
-
-
-
-
-
-
-
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_FIELD_0CBF3730F }}
+          action: "close"
