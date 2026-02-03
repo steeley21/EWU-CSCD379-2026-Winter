@@ -130,11 +130,13 @@ function glyphFor(cell: GameCell): string {
   gap: var(--hg-gap);
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(127, 127, 127, 0.35);
+
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.18);
+  background: rgb(var(--v-theme-surface));
+
   overflow-x: auto;
   width: fit-content;
   max-width: 100%;
-  background: rgba(127, 127, 127, 0.06);
 }
 
 .hg-row {
@@ -151,8 +153,10 @@ function glyphFor(cell: GameCell): string {
   justify-content: center;
 
   border-radius: 8px;
-  border: 1px solid rgba(127, 127, 127, 0.25);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.18);
   background: transparent;
+
+  color: rgb(var(--v-theme-on-surface));
 
   padding: 0;
   cursor: pointer;
@@ -167,28 +171,32 @@ function glyphFor(cell: GameCell): string {
   transform: translateY(-0.5px);
 }
 
-/* Terrain styling */
-.hg-cell[data-terrain="^"] { background: rgba(127, 127, 127, 0.10); }
-.hg-cell[data-terrain="~"] { background: rgba(127, 127, 127, 0.08); }
-.hg-cell[data-terrain="#"] { background: rgba(127, 127, 127, 0.14); }
+/* Terrain styling (subtle tint) */
+.hg-cell[data-terrain="^"] { background: rgba(var(--v-theme-on-surface), 0.06); }
+.hg-cell[data-terrain="~"] { background: rgba(var(--v-theme-on-surface), 0.04); }
+.hg-cell[data-terrain="#"] { background: rgba(var(--v-theme-on-surface), 0.10); }
 
-/* Entity styling */
+/* Entity styling (clear, theme-friendly) */
 .hg-cell[data-entity="player"],
 .hg-cell[data-entity="infected"] {
-  background: rgba(127, 127, 127, 0.18);
+  background: rgba(var(--v-theme-primary), 0.18);
   font-weight: 700;
 }
 
 .hg-cell[data-entity="enemy"] {
-  background: rgba(127, 127, 127, 0.12);
+  background: rgba(var(--v-theme-error), 0.14);
   font-weight: 700;
 }
 
 .hg-cell[data-entity="resource"] {
-  background: rgba(127, 127, 127, 0.10);
+  background: rgba(var(--v-theme-secondary), 0.14);
   font-weight: 700;
 }
 
 .hg-cell[data-state="blocked"] { opacity: 0.6; }
-.hg-cell:focus-visible { outline: 2px solid rgba(127,127,127,0.65); outline-offset: 2px; }
+
+.hg-cell:focus-visible {
+  outline: 2px solid rgba(var(--v-theme-primary), 0.9);
+  outline-offset: 2px;
+}
 </style>

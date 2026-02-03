@@ -60,11 +60,14 @@ const wrapStyle = computed(() => ({
   gap: var(--dp-gap);
   padding: var(--dp-pad);
   border-radius: 12px;
-  border: 1px solid rgba(127, 127, 127, 0.25);
-  background: rgba(127, 127, 127, 0.06);
+
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.18);
+  background: rgba(var(--v-theme-surface), 0.75);
+
   width: fit-content;
   touch-action: manipulation;
 }
+
 
 .dp-row {
   display: flex;

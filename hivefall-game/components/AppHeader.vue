@@ -8,11 +8,23 @@
       @click="drawer = !drawer"
     />
 
-    <v-toolbar-title class="text-no-wrap">
+    <v-toolbar-title class="text-truncate hf-title">
       Smiley’s Hivefall
     </v-toolbar-title>
 
+
     <v-spacer />
+
+    <!-- Theme toggle -->
+    <v-btn
+      :icon="themeIcon"
+      variant="text"
+      class="me-1"
+      :aria-label="themeLabel"
+      @click="toggleTheme"
+    />
+
+
 
     <!-- Reset (Hivefall only) -->
     <v-btn
@@ -71,6 +83,7 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHivefallHeaderActions } from '../composables/useHivefallHeaderActions'
+import { useAppTheme } from '../composables/useAppTheme'
 
 type NavItem = {
   title: string
@@ -101,4 +114,15 @@ function resetFromHeader(): void {
 function giveUpFromHeader(): void {
   giveUpFn.value?.()
 }
+
+// Theme
+const { isDark, toggleTheme } = useAppTheme()
+const themeIcon = computed(() => (isDark.value ? 'mdi-weather-sunny' : 'mdi-weather-night'))
+const themeLabel = computed(() => (isDark.value ? 'Switch to light mode' : 'Switch to dark mode'))
 </script>
+
+<style scoped>
+.hf-title {
+  max-width: 60vw; /* gives space for right-side buttons on small screens */
+}
+</style>
