@@ -10,7 +10,6 @@ on:
       - Assigment3
 
 jobs:
-  
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
@@ -26,8 +25,36 @@ jobs:
           echo "GITHUB_REF=$GITHUB_REF"
           echo "GITHUB_SHA=$GITHUB_SHA"
 
-      - name: Build And Deploy
-        id: builddeploy
+      # ---- build in hivefall-game ----
+      - name: Install
+        working-directory: hivefall-game
+        run: npm ci
+
+      - name: Nuxt prepare
+        working-directory: hivefall-game
+        run: npx nuxi prepare
+
+      - name: Tests
+        working-directory: hivefall-game
+        run: npm run test:ci
+
+      - name: Generate
+        working-directory: hivefall-game
+        run: npm run generate
+
+      - name: Stamp build
+        working-directory: hivefall-game
+        run: echo "${GITHUB_SHA}" > .output/public/build.txt
+
+      - name: Verify stamp exists
+        working-directory: hivefall-game
+        run: |
+          ls -la .output/public | head -50
+          echo "build.txt:"
+          cat .output/public/build.txt
+
+      # ---- deploy only (no rebuild inside the action) ----
+      - name: Deploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_CLIFF_07B9AA10F }}
@@ -35,9 +62,8 @@ jobs:
           action: "upload"
           production_branch: "Assigment3"
           app_location: "hivefall-game"
-          api_location: ""
           output_location: ".output/public"
-          app_build_command: "npm ci && npx nuxi prepare && npm run test:ci && npm run generate && echo $GITHUB_SHA > .output/public/build.txt"
+          skip_app_build: true
 
                     
 
