@@ -28,7 +28,7 @@ jobs:
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
           app_location: "/hivefall-game" # App source code path
           api_location: "/hivefall-game/api" # Api source code path - optional
-          output_location: "/hivefall-game/.output/public" # Built app content directory - optional
+          output_location: ".output/public" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:
@@ -42,6 +42,7 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_FIELD_0CBF3730F }}
           action: "close"
+
 
 
 
