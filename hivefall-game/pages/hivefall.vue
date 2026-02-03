@@ -36,10 +36,33 @@
     <FightDialog
       v-model="fightOpen"
       :enemy-id="fightEnemyId"
+      :hp="playerHp"
+      :max-hp="playerMaxHp"
+      :infected="infectedCount"
+      :max-enemies="maxEnemies"
       @attack="onAttack"
       @run="onRun"
       @close="onCloseFight"
     />
+
+
+    <v-dialog :model-value="gameOver" max-width="420" persistent>
+    <v-card>
+      <v-card-title class="text-h6 text-center">
+        {{ status === 'won' ? 'You Win!' : 'Game Over' }}
+      </v-card-title>
+
+      <v-card-text class="text-body-2 text-center">
+        <div>Moves: {{ moveCount }}</div>
+        <div class="mt-1">Infected: {{ infectedCount }}</div>
+      </v-card-text>
+
+      <v-card-actions>
+        <v-btn block color="primary" @click="reset">Play Again</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   </v-container>
 </template>
 
@@ -72,6 +95,7 @@ const HEADER_H = 64
 const PAGE_PAD = 16
 const availableH = computed(() => Math.max(240, height.value - HEADER_H - PAGE_PAD))
 
+
 const dpadBtnPx = computed(() => {
   const candidate = Math.floor((availableH.value - 2 * dpadPadPx.value - 2 * dpadGapPx.value) / 3)
   return Math.max(34, Math.min(52, candidate))
@@ -86,35 +110,31 @@ const gridAvailableH = computed(() => {
 
 const gridAvailableW = computed(() => {
   return stacked.value
-    ? Math.max(320, width.value - 32)
+  ? Math.max(320, width.value - 32)
     : Math.max(320, width.value - dpadW.value - 48)
-})
+  })
+  
+  const cellSizePx = computed(() => {
+    const byW = Math.floor((gridAvailableW.value - (COLS - 1) * gridGapPx.value) / COLS)
+    const byH = Math.floor((gridAvailableH.value - (ROWS - 1) * gridGapPx.value) / ROWS)
+    return Math.max(10, Math.min(24, Math.min(byW, byH)))
+  })
+  
+  const { resetFn, giveUpFn } = useHivefallHeaderActions()
+  
+  const {
+    grid, reset,
+    moveUp, moveDown, moveLeft, moveRight,
+    fight, clearFight, resolveFight,
+    status, giveUp,
+    moveCount, infectedCount,
+    playerHp, playerMaxHp, maxEnemies, 
+  } = useHivefallEngine({ rows: ROWS, cols: COLS, terrain: '.' })
 
-const cellSizePx = computed(() => {
-  const byW = Math.floor((gridAvailableW.value - (COLS - 1) * gridGapPx.value) / COLS)
-  const byH = Math.floor((gridAvailableH.value - (ROWS - 1) * gridGapPx.value) / ROWS)
-  return Math.max(10, Math.min(24, Math.min(byW, byH)))
-})
 
-const { resetFn } = useHivefallHeaderActions()
+const gameOver = computed(() => status.value !== 'playing')
 
-const {
-  grid,
-  reset,
-  moveUp,
-  moveDown,
-  moveLeft,
-  moveRight,
-  fight,
-  clearFight, 
-  resolveFight
-} = useHivefallEngine({
-  rows: ROWS,
-  cols: COLS,
-  terrain: '.',
-})
-
-const controlsEnabled = computed(() => fight.value == null)
+const controlsEnabled = computed(() => fight.value == null && status.value === 'playing')
 
 // Dialog v-model that clears fight when closed
 const fightOpen = computed<boolean>({
@@ -126,12 +146,15 @@ const fightOpen = computed<boolean>({
 
 const fightEnemyId = computed(() => fight.value?.enemyId ?? null)
 
+
 onMounted(() => {
   resetFn.value = reset
+  giveUpFn.value = giveUp
 })
 
 onBeforeUnmount(() => {
   resetFn.value = null
+  giveUpFn.value = null
 })
 
 // disable keyboard input when fight is open
@@ -143,14 +166,15 @@ usePlayerControls({
   enabled: controlsEnabled,
 })
 
-function onAttack(enemyId: number | null): void {
-  console.log('ATTACK clicked', enemyId)
+
+function onAttack(): void {
   resolveFight('attack')
+  console.log('attack invoked')
 }
 
-function onRun(enemyId: number | null): void {
-  console.log('RUN clicked', enemyId)
+function onRun(): void {
   resolveFight('run')
+  console.log('run invoked')
 }
 
 function onCloseFight(): void {

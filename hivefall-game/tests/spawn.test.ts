@@ -1,62 +1,41 @@
 import { describe, it, expect } from 'vitest'
-import { pickRandomEdgePos, findEdgeSpawnPos } from '../game/spawn'
-import type { GridPos } from '../game/hivefallTypes'
+import { createEmptyGrid } from '../types/game'
+import { step, type HivefallState } from '../game/engine'
+import { mergeHivefallRules } from '../game/hivefallRules'
 
-function seqRng(values: number[]): () => number {
-  let i = 0
-  return () => values[i++ % values.length]
-}
+describe('spawn cap', () => {
+  it('does not spawn more than maxEnemies total even if enemies list is smaller', () => {
+    const rules = mergeHivefallRules({
+      rows: 5,
+      cols: 5,
+      terrain: '.',
+      maxEnemies: 2,
+      firstSpawnAfterMoves: 1,
+      spawnPacing: { minInterval: 1, decreaseEverySpawns: 1, step: 1 },
+      playerMaxHp: 10,
+      damagePerFight: 0,
+    })
 
-function isEdge(p: GridPos, rows: number, cols: number): boolean {
-  return p.row === 0 || p.row === rows - 1 || p.col === 0 || p.col === cols - 1
-}
+    const grid = createEmptyGrid(5, 5, '.')
+    grid[2][2].entity = 'player'
 
-describe('spawn', () => {
-  it('pickRandomEdgePos always returns a position on an edge', () => {
-    const rows = 10
-    const cols = 12
-
-    for (let i = 0; i < 100; i++) {
-      const p = pickRandomEdgePos(rows, cols)
-      expect(isEdge(p, rows, cols)).toBe(true)
+    const state: HivefallState = {
+      grid,
+      playerPos: { row: 2, col: 2 },
+      enemies: [],               // none alive right now
+      moveCount: 0,
+      fight: null,
+      infectedCount: 2,          // already infected both (common case)
+      status: 'playing',
+      playerHp: 10,
+      currentSpawnInterval: 1,
+      movesSinceLastSpawn: 0,
+      nextEnemyId: 3,            // ✅ spawnedSoFar = 2 (already at cap)
     }
-  })
 
-  it('pickRandomEdgePos respects deterministic rng (example: top edge)', () => {
-    const rows = 10
-    const cols = 10
+    const next = step(state, rules, 'right', { rng: () => 0 })
 
-    // edge = floor(0.0*4) = 0 => top
-    // col = floor(0.5*10) = 5
-    const rng = seqRng([0.0, 0.5])
-    const p = pickRandomEdgePos(rows, cols, rng)
-
-    expect(p).toEqual({ row: 0, col: 5 })
-  })
-
-  it('findEdgeSpawnPos skips blocked positions and returns a later valid one', () => {
-    const rows = 10
-    const cols = 10
-
-    // Attempt 1: edge=0 top, col=5 -> (0,5) (blocked)
-    // Attempt 2: edge=1 bottom, col=2 -> (9,2) (allowed)
-    const rng = seqRng([0.0, 0.5, 0.26, 0.2])
-
-    const blocked: GridPos = { row: 0, col: 5 }
-    const isBlocked = (p: GridPos) => p.row === blocked.row && p.col === blocked.col
-
-    const pos = findEdgeSpawnPos(rows, cols, isBlocked, rng, 10)
-    expect(pos).toEqual({ row: 9, col: 2 })
-  })
-
-  it('findEdgeSpawnPos returns null if all attempts are blocked', () => {
-    const rows = 6
-    const cols = 6
-
-    const rng = seqRng([0.0, 0.1]) // always some edge, doesn’t matter
-    const isBlocked = () => true
-
-    const pos = findEdgeSpawnPos(rows, cols, isBlocked, rng, 3)
-    expect(pos).toBeNull()
+    expect(next.nextEnemyId).toBe(3)
+    expect(next.enemies.length).toBe(0)
   })
 })

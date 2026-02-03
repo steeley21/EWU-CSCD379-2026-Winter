@@ -16,14 +16,26 @@
 
     <!-- Reset (Hivefall only) -->
     <v-btn
-      v-if="isHivefall"
-      variant="outlined"
-      size="small"
-      class="me-2"
-      @click="resetFromHeader"
+        v-if="isHivefall"
+        variant="outlined"
+        size="small"
+        class="me-2"
+        @click="resetFromHeader"
     >
-      Reset
+        Reset
     </v-btn>
+
+    <!-- Give Up (Hivefall only) -->
+    <v-btn
+        v-if="isHivefall"
+        variant="text"
+        size="small"
+        class="me-2"
+        @click="giveUpFromHeader"
+    >
+        Give Up
+    </v-btn>
+
 
     <!-- Desktop nav -->
     <div class="d-none d-sm-flex ga-1">
@@ -68,7 +80,7 @@ type NavItem = {
 const drawer = ref(false)
 const route = useRoute()
 
-const { resetFn } = useHivefallHeaderActions()
+const { resetFn, giveUpFn } = useHivefallHeaderActions()
 
 const navItems: NavItem[] = [
   { title: 'Home', to: '/' },
@@ -85,5 +97,8 @@ const isHivefall = computed(() => route.path === '/hivefall')
 
 function resetFromHeader(): void {
   resetFn.value?.()
+}
+function giveUpFromHeader(): void {
+  giveUpFn.value?.()
 }
 </script>

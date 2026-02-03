@@ -13,6 +13,8 @@ export type { MoveDir } from './movement'
 
 import { resolveEnemyEnterTile, resolvePlayerEnterTile } from './collision'
 
+export type GameStatus = 'playing' | 'won' | 'lost'
+
 export type HivefallState = {
   grid: GameCell[][]
   playerPos: GridPos
@@ -20,13 +22,16 @@ export type HivefallState = {
   moveCount: number
   fight: FightState
 
-  infectedCount: number 
+  infectedCount: number
 
-  // spawn pacing
+  status: GameStatus
+  playerHp: number
+
   currentSpawnInterval: number
   movesSinceLastSpawn: number
   nextEnemyId: number
 }
+
 
 
 export type StepOptions = {
@@ -65,13 +70,17 @@ export function createInitialState(rules: HivefallRules): HivefallState {
     moveCount: 0,
     fight: null,
 
-    infectedCount: 0, 
+    infectedCount: 0,
+
+    status: 'playing',
+    playerHp: rules.playerMaxHp,
 
     currentSpawnInterval: rules.firstSpawnAfterMoves,
     movesSinceLastSpawn: 0,
     nextEnemyId: 1,
   }
 }
+
 
 
 /**
@@ -89,6 +98,9 @@ export function step(
   dir: MoveDir,
   opts: StepOptions = {}
 ): HivefallState {
+  // If not playing, no state changes.
+  if (state.status !== 'playing') return state
+  
   // If we're in a fight state, freeze world progression.
   if (state.fight) return state
 
@@ -197,7 +209,8 @@ export function step(
   let grid3 = nextState.grid
   let nextEnemyId = nextState.nextEnemyId
 
-  if (pacing.shouldSpawn && enemies.length < rules.maxEnemies) {
+  const spawnedSoFar = nextEnemyId - 1
+  if (pacing.shouldSpawn && spawnedSoFar < rules.maxEnemies) {
     const rng = opts.rng ?? Math.random
 
     const pos = findEdgeSpawnPos(
@@ -228,42 +241,83 @@ export function step(
     }
   }
 
-  return {
-    ...nextState,
-    enemies,
-    grid: grid3,
-    movesSinceLastSpawn: movesSince,
-    currentSpawnInterval: interval,
-    nextEnemyId,
-  }
+  return evaluateEndState(
+    {
+      ...nextState,
+      enemies,
+      grid: grid3,
+      movesSinceLastSpawn: movesSince,
+      currentSpawnInterval: interval,
+      nextEnemyId,
+    },
+    rules
+  )
 }
+
+
+function evaluateEndState(state: HivefallState, rules: HivefallRules): HivefallState {
+  if (state.status !== 'playing') return state
+
+  // lose beats win
+  if (state.playerHp <= 0) return { ...state, status: 'lost' }
+
+  const spawnedTotal = state.nextEnemyId - 1
+  const hasSpawnedAll = spawnedTotal >= rules.maxEnemies
+  const allInfected = state.infectedCount >= rules.maxEnemies
+  const noLiveEnemies = state.enemies.length === 0
+
+  if (!state.fight && hasSpawnedAll && allInfected && noLiveEnemies) {
+    return { ...state, status: 'won' }
+  }
+
+  return state
+}
+
 
 export type FightAction = 'attack' | 'run'
 
 export function resolveFight(
   state: HivefallState,
+  rules: HivefallRules,
   action: FightAction
 ): HivefallState {
+  if (state.status !== 'playing') return state
   if (!state.fight) return state
 
-  // "Run" for now just dismisses the fight state.
-  if (action === 'run') return clearFight(state)
+  const damage = rules.damagePerFight
 
-  // Attack = convert this enemy to infected, remove it from active enemies
+  // Run = take damage, dismiss fight (enemy stays)
+  if (action === 'run') {
+    const next = { ...state, playerHp: state.playerHp - damage, fight: null }
+    return evaluateEndState(next, rules)
+  }
+
+  // Attack = convert enemy, remove from enemies, take damage, clear fight
   const enemyId = state.fight.enemyId
   const enemy = state.enemies.find(e => e.id === enemyId)
-  if (!enemy) return clearFight(state)
+  if (!enemy) {
+    const next = { ...state, playerHp: state.playerHp - damage, fight: null }
+    return evaluateEndState(next, rules)
+  }
 
   const g = cloneGrid(state.grid)
   setEntity(g, enemy.pos, 'infected')
 
-  return {
+  const next: HivefallState = {
     ...state,
     grid: g,
     enemies: state.enemies.filter(e => e.id !== enemyId),
     infectedCount: state.infectedCount + 1,
+    playerHp: state.playerHp - damage,
     fight: null,
   }
+
+  return evaluateEndState(next, rules)
+}
+
+export function giveUp(state: HivefallState): HivefallState {
+  if (state.status !== 'playing') return state
+  return { ...state, status: 'lost', fight: null }
 }
 
 export function clearFight(state: HivefallState): HivefallState {
