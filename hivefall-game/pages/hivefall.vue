@@ -68,6 +68,7 @@
 
 
 <script setup lang="ts">
+/// <reference types="vue" />
 import { computed, onMounted, onBeforeUnmount } from 'vue'
 import { useDisplay } from 'vuetify'
 
