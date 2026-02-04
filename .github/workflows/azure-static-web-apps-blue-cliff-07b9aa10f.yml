@@ -44,6 +44,10 @@ jobs:
         working-directory: hivefall-game
         run: npm run generate
 
+      - name: Verify index.html exists
+        working-directory: hivefall-game
+        run: test -f .output/public/index.html
+
       - name: Stamp build
         working-directory: hivefall-game
         run: echo "${GITHUB_SHA}" > .output/public/build.txt
@@ -63,9 +67,10 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
           production_branch: "Assigment3"
-          app_location: "hivefall-game"
-          output_location: ".output/public"
+          app_location: "hivefall-game/.output/public"
+          api_location: ""
           skip_app_build: true
+
 
                     
 
