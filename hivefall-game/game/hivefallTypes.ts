@@ -1,5 +1,6 @@
-// hivefall-game/game/hivefallTypes.ts
+// game/hivefallTypes.ts
 import type { GameCell } from '../types/game'
+import type { WeaponId } from './hivefallRules'
 
 export type GridPos = { row: number; col: number }
 
@@ -10,6 +11,12 @@ export type Enemy = {
 
 export type FightPhase = 'interlude' | 'combat' | 'won'
 
+export type InventoryState = {
+  weapons: WeaponId[]
+  charges: Partial<Record<WeaponId, number>>
+  food: number
+}
+
 export type FightState = null | {
   enemyId: number
   enemyHp: number
@@ -17,11 +24,10 @@ export type FightState = null | {
 
   phase: FightPhase
 
-  // timers (tick-based)
-  playerHitCooldownMsRemaining: number
+  weaponCooldownMsRemaining: Partial<Record<WeaponId, number>>
+  enemyStunMsRemaining: number
   enemyHitMsUntilNext: number
 
-  // placeholder drops for won screen
   drops: string[]
 }
 
@@ -35,6 +41,8 @@ export type HivefallState = {
   infectedCount: number
   status: GameStatus
   playerHp: number
+
+  inventory: InventoryState
   fight: FightState
 
   currentSpawnInterval: number

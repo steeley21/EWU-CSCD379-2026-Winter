@@ -1,3 +1,4 @@
+<!-- components/FightDialog.vue -->
 <template>
   <v-dialog
     :model-value="modelValue"
@@ -12,7 +13,7 @@
         <span v-else>...</span>
       </v-card-title>
 
-      <!-- One clean v-if chain that contains BOTH text + actions -->
+      <!-- Interlude -->
       <template v-if="phase === 'interlude'">
         <v-card-text class="hf-body">
           <div class="hf-narration">
@@ -32,6 +33,7 @@
         </v-card-actions>
       </template>
 
+      <!-- Combat -->
       <template v-else-if="phase === 'combat'">
         <v-card-text class="hf-body">
           <v-container class="pa-0">
@@ -56,22 +58,37 @@
         </v-card-text>
 
         <v-card-actions class="hf-actions px-6 pb-6">
-          <div class="hf-actions-inner">
+          <div class="hf-actions-inner hf-actions-wrap">
+            <!-- Food heal -->
             <v-btn
               :ripple="false"
-              class="hf-hit-btn"
-              :class="{ 'hf-ready': hitReady, 'hf-pulse': pulseReady }"
               variant="outlined"
-              :disabled="!hitReady"
-              :style="hitStyle"
-              @click="emitHit"
+              class="hf-food-btn"
+              :disabled="food <= 0"
+              @click="emitUseFood"
             >
-              Hit - {{ playerDmg }} dmg
+              Food +10 ({{ food }})
+            </v-btn>
+
+            <!-- Weapons -->
+            <v-btn
+              v-for="w in weapons"
+              :key="w.id"
+              :ripple="false"
+              class="hf-weapon-btn"
+              :class="{ 'hf-ready': w.ready, 'hf-pulse': isPulsing(w.id) }"
+              variant="outlined"
+              :disabled="!w.ready"
+              :style="weaponStyle(w)"
+              @click="emitAttack(w.id)"
+            >
+              {{ weaponLabel(w) }}
             </v-btn>
           </div>
         </v-card-actions>
       </template>
 
+      <!-- Won -->
       <template v-else>
         <v-card-text class="hf-body">
           <div class="hf-narration">
@@ -80,14 +97,23 @@
 
           <div class="hf-subtle mt-3">Drops:</div>
 
-          <v-list density="comfortable" class="hf-drops mt-2" lines="one">
-            <v-list-item v-for="(d, i) in dropsToShow" :key="i" class="hf-drop-item">
-              <template #prepend>
-                <span class="hf-drop-icon" aria-hidden="true">✦</span>
-              </template>
-              <v-list-item-title>{{ d }}</v-list-item-title>
-            </v-list-item>
-          </v-list>
+          <template v-if="hasDrops">
+            <v-list density="comfortable" class="hf-drops mt-2" lines="one">
+              <v-list-item v-for="(d, i) in drops" :key="i" class="hf-drop-item">
+                <template #prepend>
+                  <span class="hf-drop-icon" aria-hidden="true">✦</span>
+                </template>
+                <v-list-item-title>{{ d }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </template>
+
+          <template v-else>
+            <div class="hf-empty-drop mt-2">
+              <span class="hf-drop-icon" aria-hidden="true">✦</span>
+              The enemy had nothing of value. You loot some scraps from their pockets and move on.
+            </div>
+          </template>
         </v-card-text>
 
         <v-card-actions class="hf-actions px-6 pb-6">
@@ -108,9 +134,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onBeforeUnmount } from 'vue'
+import { computed, reactive, watch, onBeforeUnmount } from 'vue'
+import type { WeaponId } from '../game/hivefallRules'
 
 type FightPhase = 'interlude' | 'combat' | 'won'
+
+export type WeaponButtonVm = {
+  id: WeaponId
+  name: string
+  dmg: number
+  cooldownMs: number
+  cooldownRemainingMs: number
+  ready: boolean
+  charges: number | null
+}
 
 type Props = {
   modelValue: boolean
@@ -126,15 +163,15 @@ type Props = {
   enemyHp: number
   enemyMaxHp: number
 
-  // combat numbers
-  playerDmg: number
+  // enemy combat numbers
   enemyDmg: number
   enemyHitIntervalMs: number
 
-  // cooldown UI
-  attackReady: boolean
-  attackCooldownRemainingMs: number
-  attackCooldownMs: number
+  // weapon buttons
+  weapons: WeaponButtonVm[]
+
+  // food count (usable only during combat)
+  food: number
 }
 
 const props = defineProps<Props>()
@@ -143,83 +180,106 @@ const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
   (e: 'run'): void
   (e: 'engage'): void
-  (e: 'hit'): void
+  (e: 'attack', weaponId: WeaponId): void
+  (e: 'use-food'): void
 }>()
 
-const dropsToShow = computed(() => {
-  return props.drops?.length ? props.drops : ['???', '???', '???']
-})
+const hasDrops = computed(() => (props.drops?.length ?? 0) > 0)
 
-const hitReady = computed(() => props.phase === 'combat' && props.attackReady)
+function weaponLabel(w: WeaponButtonVm): string {
+  if (w.charges != null) return `${w.name} - ${w.charges}`
+  return `${w.name} - ${w.dmg} dmg`
+}
 
-const hitProgress = computed(() => {
-  if (props.phase !== 'combat') return 0
-  const total = Math.max(1, props.attackCooldownMs)
-  const remaining = Math.max(0, props.attackCooldownRemainingMs)
+function weaponProgress(w: WeaponButtonVm): number {
+  const total = Math.max(1, w.cooldownMs)
+  const remaining = Math.max(0, w.cooldownRemainingMs)
   const p = 1 - remaining / total
   return Math.max(0, Math.min(1, p))
-})
-
-const hitStyle = computed(() => ({
-  '--hf-hit-progress': String(hitProgress.value),
-}))
-
-function emitHit(): void {
-  if (!hitReady.value) return
-  emit('hit')
 }
 
-// --- Pulse when hit becomes ready (combat-only, not on open) ---
-const pulseReady = ref(false)
-const hadCooldown = ref(false)
-let pulseTimer: number | null = null
+function weaponStyle(w: WeaponButtonVm): Record<string, string> {
+  return { '--hf-weapon-progress': String(weaponProgress(w)) }
+}
 
-function startPulse(): void {
-  pulseReady.value = false
-  requestAnimationFrame(() => {
-    pulseReady.value = true
-  })
+function emitAttack(id: WeaponId): void {
+  const w = props.weapons.find(x => x.id === id)
+  if (!w?.ready) return
+  emit('attack', id)
+}
 
-  if (pulseTimer != null) window.clearTimeout(pulseTimer)
-  pulseTimer = window.setTimeout(() => {
-    pulseReady.value = false
-    pulseTimer = null
+function emitUseFood(): void {
+  if (props.phase !== 'combat') return
+  if ((props.food ?? 0) <= 0) return
+  emit('use-food')
+}
+
+/**
+ * Per-weapon pulse when it becomes ready (after having been on cooldown).
+ */
+const pulse = reactive<Record<string, boolean>>({})
+const hadCooldown = reactive<Record<string, boolean>>({})
+const prevReady = reactive<Record<string, boolean>>({})
+const timers = new Map<string, number>()
+
+function isPulsing(id: string): boolean {
+  return pulse[id] === true
+}
+
+function startPulse(id: string): void {
+  pulse[id] = false
+  requestAnimationFrame(() => (pulse[id] = true))
+
+  const existing = timers.get(id)
+  if (existing != null) window.clearTimeout(existing)
+
+  const t = window.setTimeout(() => {
+    pulse[id] = false
+    timers.delete(id)
   }, 650)
+
+  timers.set(id, t)
 }
 
 watch(
-  () => (props.phase === 'combat' ? props.attackCooldownRemainingMs : 0),
-  (ms) => {
-    if (props.phase === 'combat' && ms > 0) hadCooldown.value = true
-  }
-)
+  () => props.weapons.map(w => ({ id: w.id, ready: w.ready, rem: w.cooldownRemainingMs })),
+  (arr) => {
+    if (props.phase !== 'combat') return
 
-watch(
-  () => hitReady.value,
-  (ready, prev) => {
-    if (prev === false && ready === true && hadCooldown.value) {
-      startPulse()
-      hadCooldown.value = false
+    for (const w of arr) {
+      if (w.rem > 0) hadCooldown[w.id] = true
+
+      const was = prevReady[w.id]
+      const now = w.ready
+
+      if (was === false && now === true && hadCooldown[w.id]) {
+        startPulse(w.id)
+        hadCooldown[w.id] = false
+      }
+
+      prevReady[w.id] = now
     }
-  }
+  },
+  { deep: true }
 )
 
 watch(
   () => props.modelValue,
   (open) => {
     if (open) {
-      pulseReady.value = false
-      hadCooldown.value = false
-      if (pulseTimer != null) {
-        window.clearTimeout(pulseTimer)
-        pulseTimer = null
-      }
+      for (const k of Object.keys(pulse)) pulse[k] = false
+      for (const k of Object.keys(hadCooldown)) hadCooldown[k] = false
+      for (const k of Object.keys(prevReady)) prevReady[k] = false
+
+      for (const t of timers.values()) window.clearTimeout(t)
+      timers.clear()
     }
   }
 )
 
 onBeforeUnmount(() => {
-  if (pulseTimer != null) window.clearTimeout(pulseTimer)
+  for (const t of timers.values()) window.clearTimeout(t)
+  timers.clear()
 })
 </script>
 
@@ -269,12 +329,21 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
-/* Hit button w/ recharge fill */
-.hf-hit-btn {
+.hf-actions-wrap {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hf-food-btn {
+  min-width: 190px;
+  background: rgba(var(--v-theme-on-surface), 0.04) !important;
+}
+
+.hf-weapon-btn {
   position: relative;
   overflow: hidden;
 
-  min-width: 220px;
+  min-width: 190px;
 
   background: rgba(var(--v-theme-on-surface), 0.06) !important;
   opacity: 1 !important;
@@ -282,7 +351,7 @@ onBeforeUnmount(() => {
   transition: filter 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
 
-.hf-hit-btn::before {
+.hf-weapon-btn::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -290,27 +359,27 @@ onBeforeUnmount(() => {
   background: rgba(var(--v-theme-primary), 0.18);
 
   transform-origin: left;
-  transform: scaleX(var(--hf-hit-progress, 0));
+  transform: scaleX(var(--hf-weapon-progress, 0));
   transition: transform 50ms linear;
 
   pointer-events: none;
 }
 
-.hf-hit-btn :deep(.v-btn__content) {
+.hf-weapon-btn :deep(.v-btn__content) {
   position: relative;
   z-index: 1;
 }
 
-.hf-hit-btn:deep(.v-btn--disabled),
-.hf-hit-btn.v-btn--disabled {
+.hf-weapon-btn:deep(.v-btn--disabled),
+.hf-weapon-btn.v-btn--disabled {
   filter: grayscale(0.35) saturate(0.75);
 }
 
-.hf-hit-btn.hf-ready {
+.hf-weapon-btn.hf-ready {
   filter: saturate(1.08);
 }
 
-.hf-hit-btn.hf-pulse {
+.hf-weapon-btn.hf-pulse {
   animation: hf-ready-pulse 650ms ease-out 1;
 }
 
@@ -347,5 +416,18 @@ onBeforeUnmount(() => {
   width: 18px;
   text-align: center;
   opacity: 0.7;
+}
+
+/* empty state */
+.hf-empty-drop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  border: 1px dashed rgba(var(--v-theme-on-surface), 0.22);
+  border-radius: 12px;
+  padding: 12px 14px;
+
+  opacity: 0.85;
 }
 </style>

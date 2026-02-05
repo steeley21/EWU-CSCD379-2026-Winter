@@ -1,6 +1,6 @@
-// hivefall-game/composables/useHivefallEngine.ts
+// composables/useHivefallEngine.ts
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
-import { mergeHivefallRules, type HivefallRules } from '../game/hivefallRules'
+import { mergeHivefallRules, type HivefallRules, type WeaponId } from '../game/hivefallRules'
 import {
   createInitialState,
   step as stepPure,
@@ -9,12 +9,30 @@ import {
   engageFight as engageFightPure,
   giveUp as giveUpPure,
   tickEnemyHit as tickEnemyHitPure,
+  grantWeapon as grantWeaponPure,
   type MoveDir,
   type FightAction,
 } from '../game/engine'
 
+export type WeaponButtonVm = {
+  id: WeaponId
+  name: string
+  dmg: number
+  cooldownMs: number
+  cooldownRemainingMs: number
+  ready: boolean
+  charges: number | null
+}
+
+export type InventoryRowVm = {
+  id: WeaponId
+  name: string
+  dmg: number
+  qty: number | null
+}
+
 export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
-  const rules = mergeHivefallRules(overrides)
+  const rules = mergeHivefallRules(overrides as any)
   const state = ref(createInitialState(rules))
 
   const grid = computed(() => state.value.grid)
@@ -28,22 +46,44 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
   const moveCount = computed(() => state.value.moveCount)
   const infectedCount = computed(() => state.value.infectedCount)
 
-  // -----------------------------
-  // Player attack cooldown (UI)
-  // -----------------------------
-  const attackCooldownMs = computed(() => rules.combat.playerHitCooldownMs)
-  const attackCooldownRemainingMs = computed(() => state.value.fight?.playerHitCooldownMsRemaining ?? 0)
-  const attackReady = computed(() => {
-    return (
-      state.value.status === 'playing' &&
-      state.value.fight?.phase === 'combat' &&
-      attackCooldownRemainingMs.value <= 0
-    )
+  const foodCount = computed(() => state.value.inventory.food ?? 0)
+
+  const inventoryUI = computed<InventoryRowVm[]>(() => {
+    const inv = state.value.inventory
+    return inv.weapons.map((id) => {
+      const def = rules.weapons[id]
+      const qty = def.consumable ? (inv.charges[id] ?? 0) : null
+      return { id, name: def.name, dmg: def.damage, qty }
+    })
   })
 
-  // -----------------------------
-  // Fight tick timer (ONLY in combat)
-  // -----------------------------
+  const weaponsUI = computed<WeaponButtonVm[]>(() => {
+    const f = state.value.fight
+    const inv = state.value.inventory
+
+    return inv.weapons.map((id) => {
+      const def = rules.weapons[id]
+      const remaining = f?.weaponCooldownMsRemaining?.[id] ?? 0
+      const charges = def.consumable ? (inv.charges[id] ?? 0) : null
+
+      const canUse =
+        state.value.status === 'playing' &&
+        f?.phase === 'combat' &&
+        remaining <= 0 &&
+        (charges == null || charges > 0)
+
+      return {
+        id,
+        name: def.name,
+        dmg: def.damage,
+        cooldownMs: def.cooldownMs,
+        cooldownRemainingMs: remaining,
+        ready: canUse,
+        charges,
+      }
+    })
+  })
+
   let fightTimer: number | null = null
   const FIGHT_TICK_MS = 50
 
@@ -103,6 +143,10 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
     state.value = stepPure(state.value, rules, dir)
   }
 
+  function grantWeapon(weaponId: WeaponId): void {
+    state.value = grantWeaponPure(state.value, rules, weaponId)
+  }
+
   return {
     rules,
     state,
@@ -117,10 +161,10 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
     playerMaxHp,
     maxEnemies,
 
-    // UI helpers
-    attackCooldownMs,
-    attackCooldownRemainingMs,
-    attackReady,
+    foodCount,
+    inventoryUI,
+    weaponsUI,
+    grantWeapon,
 
     reset,
     clearFight,

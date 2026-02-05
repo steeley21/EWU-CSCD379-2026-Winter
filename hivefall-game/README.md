@@ -1,14 +1,11 @@
 # Smiley’s Hivefall (Assignment 3)
 
 A small **ASCII-grid** turn-based game where you play as **Smiley (☻)** on a **24×14** board.  
-Each successful move advances the world: **enemies spawn from the edge and chase you**. When you collide with an enemy, a **fight dialog** appears where you can **Attack** (infect) or **Run**.
-
+Each successful move advances the world: **enemies spawn from the edge and chase you**. When you collide with an enemy, a **fight dialog** appears where you can **Engage** and fight (with weapons), or **Run**.
 
 Deployment: https://blue-cliff-07b9aa10f.4.azurestaticapps.net/
 
 ---
-
-
 
 ## Current game state (what works now)
 
@@ -34,15 +31,33 @@ Deployment: https://blue-cliff-07b9aa10f.4.azurestaticapps.net/
 - Collision triggers a **fight**:
   - player moves onto an enemy tile, **or**
   - enemy moves onto the player tile
-- Fight dialog shows:
-  - **Enemy ID**
-  - **HP (current/max)**
-  - **Infected (current/max)**
-- Current fight resolution (simple MVP):
-  - **Attack** converts the enemy to **infected (`☺`)** and removes it from active enemies
-  - **Run** dismisses the fight (escape behavior can be improved later)
+- Fight is **phase-based**:
+  - **Interlude**: narrative pause, enemy does not attack yet
+  - **Combat**: starts after you click **Attack** (engage)
+  - **Won**: killing blow switches to `won` phase; dialog stays open until you click **Continue**
+- Enemy hits are **timer-based during combat** (tick loop in `useHivefallEngine.ts`)
 - **Lose condition:** HP reaches **0**, or you choose **Give Up**
-- **Win condition:** after **all `maxEnemies` have spawned**, you infect all of them (no active enemies remaining)
+- **Win condition:** after **all `maxEnemies` have spawned**, you infect all of them (no active enemies remaining)  
+  *(Win is evaluated after the fight closes via **Continue**.)*
+
+### Weapons + inventory
+- Player starts with the **Hit** weapon
+- Inventory tracks:
+  - **Owned weapons** (list of weapon ids)
+  - **Charges** for consumable weapons (grenade-style)
+- Fight dialog shows **one button per owned weapon**, with:
+  - per-weapon cooldown fill
+  - disabled state when on cooldown / out of charges
+  - consumables show **“Grenade - <qty>”** style labels
+- **Cooldowns reset each fight**
+- **Stun** (via stun grenade) pauses enemy attacks while active  
+  - **Enemy attack timer resets when stun ends**
+
+### Inventory UI + debug
+- Inventory is accessible via an **Inventory button** near the D-pad:
+  - Desktop / wide: above the D-pad, **to the right of the GameGrid**
+  - Mobile / stacked: **below the GameGrid** but **above the D-pad**
+- Includes a **debug “add weapon”** control to grant weapons one-at-a-time for testing
 
 ---
 
@@ -55,8 +70,7 @@ Deployment: https://blue-cliff-07b9aa10f.4.azurestaticapps.net/
 
 Planned later (not implemented yet):
 - blocked terrain (`#`, `^`) and movement restrictions
-- resources (`*`) and upgrades
-- more meaningful combat options (cooldowns, heals, etc.)
+- resource drops (food / weapon drops) and upgrades
 
 ---
 
@@ -78,24 +92,25 @@ Planned later (not implemented yet):
 - `pages/hivefall.vue` – layout + wiring to the engine + dialogs
 - `components/GameGrid.vue` – renderer for a `GameCell[][]`
 - `components/DPad.vue` – input component (calls callbacks)
-- `components/FightDialog.vue` – fight modal + HUD (HP / infected)
+- `components/FightDialog.vue` – fight modal + HUD + weapon buttons
+- `components/InventoryDialog.vue` – inventory modal + debug add weapon
 - `components/AppHeader.vue` – nav + Hivefall-only actions (Reset / Give Up)
 
 ### Game logic layer (testable)
 Core logic lives in `/game` as **pure TypeScript** for unit testing:
 
-- `game/engine.ts` – pure state transitions (`step`, `createInitialState`, fight resolution, end-state evaluation)
+- `game/engine.ts` – pure state transitions (`step`, `createInitialState`, fight actions, end-state evaluation)
 - `game/movement.ts` – movement/bounds helpers (pure)
 - `game/collision.ts` – collision helpers (fight triggers; terrain/resources hooks later)
-- `game/combat.ts` – fight state + damage/infection rules (pure)
+- `game/combat.ts` – fight state + weapon attacks + stun + enemy hit logic (pure)
 - `game/enemyAi.ts` – enemy chase “move 1 step toward player”
 - `game/spawn.ts` – edge spawn selection + retry logic
 - `game/pacing.ts` – spawn pacing helpers (interval + acceleration controls)
-- `game/hivefallRules.ts` – shared defaults (rows/cols/maxEnemies/pacing/combat tuning)
-- `game/hivefallTypes.ts` – shared types (`GridPos`, `Enemy`, `FightState`, etc.)
+- `game/hivefallRules.ts` – shared defaults (rows/cols/maxEnemies/pacing/combat tuning + weapon library)
+- `game/hivefallTypes.ts` – shared types (`GridPos`, `Enemy`, `FightState`, `InventoryState`, etc.)
 
 Vue wrapper:
-- `composables/useHivefallEngine.ts` – wraps the pure engine in Vue reactivity
+- `composables/useHivefallEngine.ts` – wraps the pure engine in Vue reactivity + runs the combat tick timer
 
 ---
 
@@ -103,8 +118,6 @@ Vue wrapper:
 
 ```text
 hivefall-game/
-  .nuxt/              # generated (Nuxt dev/build)
-  .output/            # generated (Nuxt build output)
   api/                # reserved for Phase 2 backend work (ASP.NET) / API assets
   assets/
   components/
@@ -112,12 +125,12 @@ hivefall-game/
     DPad.vue
     FightDialog.vue
     GameGrid.vue
+    InventoryDialog.vue
   composables/
     useAppTheme.ts
     useHivefallEngine.ts
     useHivefallHeaderActions.ts
     usePlayerControls.ts
-  dist/               # generated (if using static output)
   game/
     collision.ts
     combat.ts
@@ -142,14 +155,15 @@ hivefall-game/
     endStates.test.ts
     enemyAI.test.ts
     engine.test.ts
+    fightPhases.test.ts
     fightResolution.test.ts
+    inventory.test.ts
     movement.test.ts
     pacing.test.ts
     spawn.test.ts
   types/
     game.ts
     shims-vue.d.ts
-  .gitignore
   app.vue
   nuxt.config.ts
   package.json
@@ -160,7 +174,6 @@ hivefall-game/
   tsconfig.json
   node_modules/        # generated (not committed)
 ```
-
 
 ---
 
@@ -181,7 +194,7 @@ npm run dev
 
 Run unit tests:
 ```bash
-npm run test
+npm run test:ci
 ```
 
 Current test coverage includes:
@@ -190,7 +203,8 @@ Current test coverage includes:
 - Pacing + acceleration rules (`game/pacing.ts`)
 - Movement helpers (`game/movement.ts`)
 - Collision helpers (`game/collision.ts`)
-- Engine step behavior + fight resolution + end states (`game/engine.ts`)
+- Engine step behavior + fight phases + weapon combat + end states (`game/engine.ts`)
+- Inventory / weapon granting (`tests/inventory.test.ts`)
 
 ---
 
@@ -199,8 +213,7 @@ Current test coverage includes:
 ### Phase 1 MVP polish
 - [ ] Terrain rules: blocked tiles (`#`, `^`) + enemy/player movement restrictions
 - [ ] Improve “Run” behavior (push player back / reposition)
-- [ ] Expand combat beyond MVP (cooldowns, heal, damage model)
-- [ ] Resources (`*`) + upgrades (once finalized)
+- [ ] Resource drops (food + weapon drops) and item usage
 
 ### Phase 2 (API + DB)
 - store completed runs or stats
@@ -212,4 +225,5 @@ Current test coverage includes:
 - Turn-based feel: every successful player move advances the world
 - “Pressure” mechanic: enemies spawn faster over time (configurable pacing)
 - Infection-based win condition: **convert enemies to the hive** (`E → ☺`)
+- Weapon-based combat with cooldowns + consumables + stun
 - ASCII grid aesthetic with mobile-friendly controls

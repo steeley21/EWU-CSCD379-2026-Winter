@@ -1,14 +1,15 @@
-// hivefall-game/game/engine.ts
+// game/engine.ts
 import { createEmptyGrid } from '../types/game'
 import type { GameCell } from '../types/game'
-import type { HivefallRules } from './hivefallRules'
+import type { HivefallRules, WeaponId } from './hivefallRules'
 import type { Enemy, GridPos, HivefallState } from './hivefallTypes'
 import {
   startFight,
   engageFight as engageFightCombat,
-  playerHit,
+  playerAttack,
   runFromFight,
   applyEnemyHitOnce,
+  useFood as useFoodCombat,
 } from './combat'
 import { findEdgeSpawnPos } from './spawn'
 import { nextEnemyStepToward } from './enemyAi'
@@ -21,6 +22,10 @@ export type { MoveDir } from './movement'
 import { resolveEnemyEnterTile, resolvePlayerEnterTile } from './collision'
 
 export type StepOptions = {
+  rng?: () => number
+}
+
+export type ResolveFightOptions = {
   rng?: () => number
 }
 
@@ -61,10 +66,76 @@ export function createInitialState(rules: HivefallRules): HivefallState {
     status: 'playing',
     playerHp: rules.playerMaxHp,
 
+    inventory: {
+      weapons: ['hit'],
+      charges: {},
+      food: 0,
+    },
+
     currentSpawnInterval: rules.firstSpawnAfterMoves,
     movesSinceLastSpawn: 0,
     nextEnemyId: 1,
   }
+}
+
+/**
+ * Grant a weapon to the player (used by debug UI now; later by drops).
+ * - Non-consumables: add to weapons list if missing.
+ * - Consumables: ensure weapon is listed, and increment charges by +1 each grant.
+ * - If granted during an active combat fight, initialize cooldown entry so UI can show it immediately.
+ */
+export function grantWeapon(
+  state: HivefallState,
+  rules: HivefallRules,
+  weaponId: WeaponId
+): HivefallState {
+  if (!rules.weapons[weaponId]) return state
+
+  const def = rules.weapons[weaponId]
+  const inv = state.inventory
+
+  const alreadyHas = inv.weapons.includes(weaponId)
+
+  let nextWeapons = inv.weapons
+  let nextCharges = inv.charges
+  let changed = false
+
+  if (!alreadyHas) {
+    nextWeapons = [...inv.weapons, weaponId]
+    changed = true
+  }
+
+  if (def.consumable) {
+    const cur = inv.charges[weaponId] ?? 0
+    nextCharges = { ...inv.charges, [weaponId]: cur + 1 }
+    changed = true
+  }
+
+  if (!changed) return state
+
+  let next: HivefallState = {
+    ...state,
+    inventory: {
+      ...inv,
+      weapons: nextWeapons,
+      charges: nextCharges,
+    },
+  }
+
+  if (next.fight && next.fight.phase === 'combat') {
+    const cds = next.fight.weaponCooldownMsRemaining ?? {}
+    if (cds[weaponId] == null) {
+      next = {
+        ...next,
+        fight: {
+          ...next.fight,
+          weaponCooldownMsRemaining: { ...cds, [weaponId]: 0 },
+        },
+      }
+    }
+  }
+
+  return next
 }
 
 export function step(
@@ -74,22 +145,16 @@ export function step(
   opts: StepOptions = {}
 ): HivefallState {
   if (state.status !== 'playing') return state
-
-  // Any active fight (interlude/combat/won) freezes world progression.
   if (state.fight) return state
 
   const move = attemptMove(state.playerPos, dir, rules.rows, rules.cols)
   if (!move.ok) return state
 
   const to = move.to
-
   const playerCollision = resolvePlayerEnterTile(state.grid, state.enemies, to)
 
   if (playerCollision.kind === 'blocked') return state
-
-  if (playerCollision.kind === 'fight') {
-    return startFightEvaluated(state, rules, playerCollision.enemyId)
-  }
+  if (playerCollision.kind === 'fight') return startFightEvaluated(state, rules, playerCollision.enemyId)
 
   let g = cloneGrid(state.grid)
   setEntity(g, state.playerPos, null)
@@ -155,7 +220,6 @@ export function step(
     nextState = { ...nextState, enemies: updated, grid: grid2 }
   })()
 
-  // If fight triggered during enemy movement, do not advance pacing/spawn.
   if (nextState.fight) return nextState
 
   const pacing = advanceSpawnPacing({
@@ -216,7 +280,6 @@ function startFightEvaluated(state: HivefallState, rules: HivefallRules, enemyId
 
 function evaluateEndState(state: HivefallState, rules: HivefallRules): HivefallState {
   if (state.status !== 'playing') return state
-
   if (state.playerHp <= 0) return { ...state, status: 'lost' }
 
   const spawnedTotal = state.nextEnemyId - 1
@@ -224,7 +287,6 @@ function evaluateEndState(state: HivefallState, rules: HivefallRules): HivefallS
   const allInfected = state.infectedCount >= rules.maxEnemies
   const noLiveEnemies = state.enemies.length === 0
 
-  // NOTE: still requires fight to be cleared (so Continue matters)
   if (!state.fight && hasSpawnedAll && allInfected && noLiveEnemies) {
     return { ...state, status: 'won' }
   }
@@ -232,35 +294,40 @@ function evaluateEndState(state: HivefallState, rules: HivefallRules): HivefallS
   return state
 }
 
-export type FightAction = 'attack' | 'run'
+export type FightAction =
+  | { kind: 'run' }
+  | { kind: 'attack'; weaponId: WeaponId }
+  | { kind: 'use_food' }
 
 export function resolveFight(
   state: HivefallState,
   rules: HivefallRules,
-  action: FightAction
+  action: FightAction,
+  opts: ResolveFightOptions = {}
 ): HivefallState {
   if (state.status !== 'playing') return state
   if (!state.fight) return state
 
-  // Once we're in "won", only Continue should close it (endFight()).
   if (state.fight.phase === 'won') return state
 
-  if (action === 'run') {
+  if (action.kind === 'run') {
     return evaluateEndState(runFromFight(state), rules)
   }
 
-  // Attack is only valid once you've engaged (combat)
   if (state.fight.phase !== 'combat') return state
 
-  return evaluateEndState(playerHit(state, rules), rules)
+  if (action.kind === 'use_food') {
+    return evaluateEndState(useFoodCombat(state, rules), rules)
+  }
+
+  const rng = opts.rng ?? Math.random
+  return evaluateEndState(playerAttack(state, rules, action.weaponId, rng), rules)
 }
 
-// interlude -> combat (enemy starts attacking only after this)
 export function engageFight(state: HivefallState, rules: HivefallRules): HivefallState {
   return evaluateEndState(engageFightCombat(state, rules), rules)
 }
 
-// used when the dialog closes ("Continue") to allow win evaluation immediately
 export function endFight(state: HivefallState, rules: HivefallRules): HivefallState {
   if (!state.fight) return state
   return evaluateEndState({ ...state, fight: null }, rules)
@@ -271,13 +338,22 @@ export function giveUp(state: HivefallState): HivefallState {
   return { ...state, status: 'lost', fight: null }
 }
 
-// Force-clear without evaluating win (generally use endFight() for Continue)
 export function clearFight(state: HivefallState): HivefallState {
   if (!state.fight) return state
   return { ...state, fight: null }
 }
 
-// Tick-based fight loop (cooldowns + enemy hits). Only runs during combat phase.
+function decWeaponCooldowns(
+  cooldowns: Partial<Record<WeaponId, number>>,
+  dt: number
+): Partial<Record<WeaponId, number>> {
+  const next: Partial<Record<WeaponId, number>> = { ...(cooldowns ?? {}) }
+  for (const k of Object.keys(next) as WeaponId[]) {
+    next[k] = Math.max(0, (next[k] ?? 0) - dt)
+  }
+  return next
+}
+
 export function tickEnemyHit(state: HivefallState, rules: HivefallRules, tickMs: number): HivefallState {
   if (state.status !== 'playing') return state
   if (!state.fight) return state
@@ -285,30 +361,47 @@ export function tickEnemyHit(state: HivefallState, rules: HivefallRules, tickMs:
 
   const dt = Math.max(0, tickMs)
 
-  // decrement timers
-  const nextCooldown = Math.max(0, (state.fight.playerHitCooldownMsRemaining ?? 0) - dt)
-  let nextUntil = (state.fight.enemyHitMsUntilNext ?? rules.combat.enemyHitIntervalMs) - dt
+  const nextCooldowns = decWeaponCooldowns(state.fight.weaponCooldownMsRemaining ?? {}, dt)
+
+  const stunBefore = state.fight.enemyStunMsRemaining ?? 0
+  const stunAfter = Math.max(0, stunBefore - dt)
+
+  if (stunAfter > 0) {
+    const nextStunned: HivefallState = {
+      ...state,
+      fight: {
+        ...state.fight,
+        weaponCooldownMsRemaining: nextCooldowns,
+        enemyStunMsRemaining: stunAfter,
+        enemyHitMsUntilNext: rules.combat.enemyHitIntervalMs,
+      },
+    }
+    return evaluateEndState(nextStunned, rules)
+  }
+
+  let enemyUntil = state.fight.enemyHitMsUntilNext ?? rules.combat.enemyHitIntervalMs
+  if (stunBefore > 0 && stunAfter === 0) enemyUntil = rules.combat.enemyHitIntervalMs
+  else enemyUntil = enemyUntil - dt
 
   let next: HivefallState = {
     ...state,
     fight: {
       ...state.fight,
-      playerHitCooldownMsRemaining: nextCooldown,
-      enemyHitMsUntilNext: nextUntil,
+      weaponCooldownMsRemaining: nextCooldowns,
+      enemyStunMsRemaining: 0,
+      enemyHitMsUntilNext: enemyUntil,
     },
   }
 
-  // apply enemy hits if the timer elapsed (support catch-up if dt is large)
   while (next.fight && next.fight.phase === 'combat' && next.fight.enemyHitMsUntilNext <= 0) {
     next = applyEnemyHitOnce(next, rules)
     if (!next.fight || next.fight.phase !== 'combat') break
 
-    nextUntil = next.fight.enemyHitMsUntilNext + rules.combat.enemyHitIntervalMs
     next = {
       ...next,
       fight: {
         ...next.fight,
-        enemyHitMsUntilNext: nextUntil,
+        enemyHitMsUntilNext: rules.combat.enemyHitIntervalMs,
       },
     }
   }

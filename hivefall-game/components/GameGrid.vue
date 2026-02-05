@@ -1,3 +1,4 @@
+<!-- components/GameGrid.vue -->
 <template>
   <div
     class="hg-grid-wrap"

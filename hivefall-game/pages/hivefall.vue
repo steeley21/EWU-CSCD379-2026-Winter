@@ -1,3 +1,4 @@
+<!-- pages/hivefall.vue -->
 <template>
   <v-container fluid class="hf-page pa-2">
     <v-row
@@ -19,17 +20,53 @@
         />
       </v-col>
 
-      <v-col cols="auto" class="d-flex justify-center">
-        <DPad
-          :disabled="!controlsEnabled"
-          :btn-size-px="dpadBtnPx"
-          :gap-px="dpadGapPx"
-          :pad-px="dpadPadPx"
-          :on-up="moveUp"
-          :on-down="moveDown"
-          :on-left="moveLeft"
-          :on-right="moveRight"
-        />
+      <v-col cols="auto" class="d-flex flex-column align-center">
+        <div class="hf-controls">
+          <div class="hf-controls-top">
+            <v-btn
+              variant="outlined"
+              size="small"
+              class="me-2"
+              :disabled="status !== 'playing'"
+              @click="inventoryOpen = true"
+            >
+              Inventory
+            </v-btn>
+
+            <v-select
+              v-model="debugWeaponId"
+              :items="debugWeaponOptions"
+              item-title="title"
+              item-value="value"
+              density="compact"
+              hide-details
+              variant="outlined"
+              style="min-width: 180px"
+              class="me-2"
+              :disabled="status !== 'playing'"
+            />
+
+            <v-btn
+              variant="tonal"
+              size="small"
+              :disabled="status !== 'playing' || !debugWeaponId"
+              @click="onDebugAddWeapon"
+            >
+              Add
+            </v-btn>
+          </div>
+
+          <DPad
+            :disabled="!controlsEnabled"
+            :btn-size-px="dpadBtnPx"
+            :gap-px="dpadGapPx"
+            :pad-px="dpadPadPx"
+            :on-up="moveUp"
+            :on-down="moveDown"
+            :on-left="moveLeft"
+            :on-right="moveRight"
+          />
+        </div>
       </v-col>
     </v-row>
 
@@ -37,62 +74,54 @@
       v-model="fightOpen"
       :phase="(fightPhase ?? 'interlude')"
       :drops="fightDrops"
-
+      :weapons="weaponsUI"
+      :food="foodCount"
       :enemy-id="fightEnemyId"
       :hp="playerHp"
       :max-hp="playerMaxHp"
       :enemy-hp="fightEnemyHp"
       :enemy-max-hp="fightEnemyMaxHp"
-
-      :player-dmg="rules.combat.playerHitDamage"
       :enemy-dmg="rules.combat.enemyHitDamage"
       :enemy-hit-interval-ms="rules.combat.enemyHitIntervalMs"
-
-      :attack-ready="attackReady"
-      :attack-cooldown-remaining-ms="attackCooldownRemainingMs"
-      :attack-cooldown-ms="attackCooldownMs"
-
       @engage="onEngage"
-      @hit="onHit"
+      @attack="onAttack"
+      @use-food="onUseFood"
       @run="onRun"
     />
 
-
-
-
+    <InventoryDialog v-model="inventoryOpen" :food="foodCount" :items="inventoryUI" />
 
     <v-dialog :model-value="gameOver" max-width="420" persistent>
-    <v-card>
-      <v-card-title class="text-h6 text-center">
-        {{ status === 'won' ? 'You Win!' : 'Game Over' }}
-      </v-card-title>
+      <v-card>
+        <v-card-title class="text-h6 text-center">
+          {{ status === 'won' ? 'You Win!' : 'Game Over' }}
+        </v-card-title>
 
-      <v-card-text class="text-body-2 text-center">
-        <div>Moves: {{ moveCount }}</div>
-        <div class="mt-1">Infected: {{ infectedCount }}</div>
-      </v-card-text>
+        <v-card-text class="text-body-2 text-center">
+          <div>Moves: {{ moveCount }}</div>
+          <div class="mt-1">Infected: {{ infectedCount }}</div>
+        </v-card-text>
 
-      <v-card-actions>
-        <v-btn block color="primary" @click="reset">Play Again</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
+        <v-card-actions>
+          <v-btn block color="primary" @click="reset">Play Again</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
-
 <script setup lang="ts">
 /// <reference types="vue" />
-import { computed, onMounted, onBeforeUnmount } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useDisplay } from 'vuetify'
-
 
 import GameGrid from '../components/GameGrid.vue'
 import DPad from '../components/DPad.vue'
 import FightDialog from '../components/FightDialog.vue'
+import InventoryDialog from '../components/InventoryDialog.vue'
 
 import type { GameCell } from '../types/game'
+import type { WeaponId } from '../game/hivefallRules'
 import { useHivefallEngine } from '../composables/useHivefallEngine'
 import { usePlayerControls } from '../composables/usePlayerControls'
 import { useHivefallHeaderActions } from '../composables/useHivefallHeaderActions'
@@ -112,8 +141,6 @@ const HEADER_H = 64
 const PAGE_PAD = 16
 const availableH = computed(() => Math.max(240, height.value - HEADER_H - PAGE_PAD))
 
-
-
 const dpadBtnPx = computed(() => {
   const candidate = Math.floor((availableH.value - 2 * dpadPadPx.value - 2 * dpadGapPx.value) / 3)
   return Math.max(34, Math.min(52, candidate))
@@ -128,8 +155,8 @@ const gridAvailableH = computed(() => {
 
 const gridAvailableW = computed(() => {
   return stacked.value
-  ? Math.max(320, width.value - 32)
-  : Math.max(320, width.value - dpadW.value - 48)
+    ? Math.max(320, width.value - 32)
+    : Math.max(320, width.value - dpadW.value - 48)
 })
 
 const cellSizePx = computed(() => {
@@ -142,28 +169,36 @@ const { resetFn, giveUpFn } = useHivefallHeaderActions()
 
 const {
   rules,
-  grid, reset,
-  moveUp, moveDown, moveLeft, moveRight,
-  fight, fightPhase, clearFight, resolveFight, engageFight,
-  status, giveUp,
-  moveCount, infectedCount,
-  playerHp, playerMaxHp, maxEnemies,
-
-  attackReady,
-  attackCooldownRemainingMs,
-  attackCooldownMs,
+  grid,
+  reset,
+  moveUp,
+  moveDown,
+  moveLeft,
+  moveRight,
+  fight,
+  fightPhase,
+  clearFight,
+  resolveFight,
+  engageFight,
+  status,
+  giveUp,
+  moveCount,
+  infectedCount,
+  playerHp,
+  playerMaxHp,
+  weaponsUI,
+  inventoryUI,
+  grantWeapon,
+  foodCount,
 } = useHivefallEngine({ rows: ROWS, cols: COLS, terrain: '.' })
 
 const fightDrops = computed(() => fight.value?.drops ?? [])
-
 const fightEnemyHp = computed(() => fight.value?.enemyHp ?? 0)
 const fightEnemyMaxHp = computed(() => fight.value?.enemyMaxHp ?? 0)
 
 const gameOver = computed(() => status.value !== 'playing')
-
 const controlsEnabled = computed(() => fight.value == null && status.value === 'playing')
 
-// Dialog v-model that clears fight when closed
 const fightOpen = computed<boolean>({
   get: () => fight.value != null,
   set: (open) => {
@@ -173,6 +208,20 @@ const fightOpen = computed<boolean>({
 
 const fightEnemyId = computed(() => fight.value?.enemyId ?? null)
 
+const inventoryOpen = ref(false)
+
+const debugWeaponOptions = computed(() => {
+  return (Object.values(rules.weapons) as { id: WeaponId; name: string }[])
+    .filter(w => w.id !== 'hit')
+    .map(w => ({ title: w.name, value: w.id }))
+})
+
+const debugWeaponId = ref<WeaponId>('sword')
+
+function onDebugAddWeapon(): void {
+  if (status.value !== 'playing') return
+  grantWeapon(debugWeaponId.value)
+}
 
 onMounted(() => {
   resetFn.value = reset
@@ -184,7 +233,6 @@ onBeforeUnmount(() => {
   giveUpFn.value = null
 })
 
-// disable keyboard input when fight is open
 usePlayerControls({
   onUp: moveUp,
   onDown: moveDown,
@@ -193,31 +241,29 @@ usePlayerControls({
   enabled: controlsEnabled,
 })
 
-
 function onEngage(): void {
   engageFight()
 }
 
-function onHit(): void {
-  if (!attackReady.value) return
-  resolveFight('attack')
+function onAttack(weaponId: WeaponId): void {
+  resolveFight({ kind: 'attack', weaponId })
+}
+
+function onUseFood(): void {
+  resolveFight({ kind: 'use_food' })
 }
 
 function onRun(): void {
-  resolveFight('run')
+  resolveFight({ kind: 'run' })
 }
-
 
 function onCellClick(payload: { row: number; col: number; cell: GameCell }): void {
   console.log('clicked', payload)
 }
 </script>
 
-
-
 <style scoped>
 .hf-page {
-  /* keep everything on one screen */
   height: calc(100dvh - 64px);
   overflow: hidden;
 
@@ -230,5 +276,20 @@ function onCellClick(payload: { row: number; col: number; cell: GameCell }): voi
   width: 100%;
   justify-content: center;
   align-items: center;
+}
+
+.hf-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.hf-controls-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
 }
 </style>

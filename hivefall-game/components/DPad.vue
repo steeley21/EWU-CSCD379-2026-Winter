@@ -1,3 +1,4 @@
+<!-- components/DPad.vue -->
 <template>
   <div class="dp-wrap" :style="wrapStyle" role="group" aria-label="Movement controls">
     <div class="dp-row">

@@ -16,6 +16,10 @@ describe('fight phases', () => {
       enemyHitDamage: 2,
       enemyHitIntervalMs: 1500,
     },
+    // make Hit explicit for these tests
+    weapons: {
+      hit: { damage: 1, cooldownMs: 800, name: 'Hit' },
+    },
   })
 
   function baseState(overrides: Partial<HivefallState> = {}): HivefallState {
@@ -33,18 +37,24 @@ describe('fight phases', () => {
       infectedCount: 0,
       status: 'playing',
       playerHp: 10,
+
+      inventory: { weapons: ['hit'], charges: {}, food: 0 },
+
       fight: {
         enemyId: 1,
         enemyHp: 2,
         enemyMaxHp: 2,
         phase: 'interlude',
-        playerHitCooldownMsRemaining: 0,
+        weaponCooldownMsRemaining: {},
+        enemyStunMsRemaining: 0,
         enemyHitMsUntilNext: rules.combat.enemyHitIntervalMs,
         drops: [],
       },
+
       currentSpawnInterval: rules.firstSpawnAfterMoves,
       movesSinceLastSpawn: 0,
       nextEnemyId: 3, // spawnedTotal = 2 (== maxEnemies) so win can be evaluated later
+
       ...overrides,
     }
 
@@ -61,15 +71,17 @@ describe('fight phases', () => {
     expect(next.fight?.phase).toBe('interlude')
   })
 
-  it('engageFight transitions interlude -> combat (and resets enemy timer)', () => {
+  it('engageFight transitions interlude -> combat (and resets enemy timer + weapon cooldowns)', () => {
     const s = baseState({
+      inventory: { weapons: ['hit', 'sword'], charges: {}, food: 0 },
       fight: {
         enemyId: 1,
         enemyHp: 2,
         enemyMaxHp: 2,
         phase: 'interlude',
-        playerHitCooldownMsRemaining: 123,
-        enemyHitMsUntilNext: 77,
+        weaponCooldownMsRemaining: { hit: 123, sword: 999 }, // should reset
+        enemyStunMsRemaining: 777, // should reset
+        enemyHitMsUntilNext: 77, // should reset
         drops: [],
       },
     })
@@ -77,34 +89,37 @@ describe('fight phases', () => {
     const next = engageFight(s, rules)
 
     expect(next.fight?.phase).toBe('combat')
-    expect(next.fight?.playerHitCooldownMsRemaining).toBe(0)
+    expect(next.fight?.enemyStunMsRemaining).toBe(0)
+    expect(next.fight?.weaponCooldownMsRemaining.hit).toBe(0)
+    expect(next.fight?.weaponCooldownMsRemaining.sword).toBe(0)
     expect(next.fight?.enemyHitMsUntilNext).toBe(rules.combat.enemyHitIntervalMs)
   })
 
   it('attack is ignored in interlude', () => {
     const s = baseState()
 
-    const next = resolveFight(s, rules, 'attack')
+    const next = resolveFight(s, rules, { kind: 'attack', weaponId: 'hit' })
     expect(next).toBe(s)
     expect(next.fight?.phase).toBe('interlude')
     expect(next.fight?.enemyHp).toBe(2)
   })
 
   it('after enemy is defeated, phase becomes won and resolveFight becomes a no-op', () => {
-    // combat with enemyHp=1 so one hit kills
+    // combat with enemyHp=1 so one hit kills (Hit dmg = 1)
     const s = baseState({
       fight: {
         enemyId: 1,
         enemyHp: 1,
         enemyMaxHp: 1,
         phase: 'combat',
-        playerHitCooldownMsRemaining: 0,
+        weaponCooldownMsRemaining: { hit: 0 },
+        enemyStunMsRemaining: 0,
         enemyHitMsUntilNext: rules.combat.enemyHitIntervalMs,
         drops: [],
       },
     })
 
-    const afterKill = resolveFight(s, rules, 'attack')
+    const afterKill = resolveFight(s, rules, { kind: 'attack', weaponId: 'hit' })
 
     expect(afterKill.fight?.phase).toBe('won')
     expect(afterKill.fight?.enemyHp).toBe(0)
@@ -113,8 +128,8 @@ describe('fight phases', () => {
     expect(afterKill.grid[1][1].entity).toBe('infected')
 
     // resolveFight should do nothing while in 'won'
-    const afterNoopAttack = resolveFight(afterKill, rules, 'attack')
-    const afterNoopRun = resolveFight(afterKill, rules, 'run')
+    const afterNoopAttack = resolveFight(afterKill, rules, { kind: 'attack', weaponId: 'hit' })
+    const afterNoopRun = resolveFight(afterKill, rules, { kind: 'run' })
     expect(afterNoopAttack).toBe(afterKill)
     expect(afterNoopRun).toBe(afterKill)
   })
@@ -128,7 +143,8 @@ describe('fight phases', () => {
         enemyHp: 0,
         enemyMaxHp: 2,
         phase: 'won',
-        playerHitCooldownMsRemaining: 0,
+        weaponCooldownMsRemaining: { hit: 0 },
+        enemyStunMsRemaining: 0,
         enemyHitMsUntilNext: rules.combat.enemyHitIntervalMs,
         drops: ['???'],
       },
@@ -149,7 +165,8 @@ describe('fight phases', () => {
         enemyHp: 0,
         enemyMaxHp: 2,
         phase: 'won',
-        playerHitCooldownMsRemaining: 0,
+        weaponCooldownMsRemaining: { hit: 0 },
+        enemyStunMsRemaining: 0,
         enemyHitMsUntilNext: rules.combat.enemyHitIntervalMs,
         drops: ['???'],
       },
