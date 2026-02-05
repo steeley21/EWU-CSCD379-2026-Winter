@@ -1,12 +1,12 @@
 export default {
   ssr: false,
-  // Static target: generate a static site with `nuxi generate`
   nitro: {
-    prerender: {
-      routes: []
-    }
+    prerender: { routes: [] }
   },
-  css: ['vuetify/styles'],
+  css: [
+    'vuetify/styles',
+    '~/assets/hf-theme.css',
+  ],
   build: {
     transpile: ['vuetify']
   },

@@ -5,7 +5,7 @@
     @update:modelValue="(v) => $emit('update:modelValue', v)"
     max-width="560"
   >
-    <v-card class="hf-card">
+    <v-card class="hf-glass hf-accent-border" variant="flat">
       <v-card-title class="text-h6 text-center">Inventory</v-card-title>
 
       <v-card-text>
@@ -13,7 +13,7 @@
           <strong>Food:</strong> {{ food }}
         </div>
 
-        <v-table density="compact">
+        <v-table density="compact" class="hf-table">
           <thead>
             <tr>
               <th class="text-left">Weapon</th>
@@ -62,9 +62,3 @@ defineEmits<{
   (e: 'update:modelValue', v: boolean): void
 }>()
 </script>
-
-<style scoped>
-.hf-card {
-  border-radius: 14px;
-}
-</style>

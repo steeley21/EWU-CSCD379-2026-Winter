@@ -6,7 +6,7 @@
     max-width="560"
     persistent
   >
-    <v-card class="hf-card">
+    <v-card class="hf-glass hf-accent-border" variant="flat">
       <v-card-title class="text-h6 text-center">
         <span v-if="phase === 'won'">Enemy Defeated</span>
         <span v-else-if="phase === 'combat'">Fight!</span>
@@ -39,14 +39,14 @@
           <v-container class="pa-0">
             <v-row class="ma-0" align="center" justify="space-between" no-gutters>
               <v-col cols="5" class="text-center">
-                <div class="hf-avatar" aria-label="Smiley">☻</div>
+                <div class="hf-avatar hf-avatar--player" aria-label="Smiley">☻</div>
                 <div class="hf-hp">HP {{ hp }} / {{ maxHp }}</div>
               </v-col>
 
               <v-col cols="2" class="text-center hf-vs">VS</v-col>
 
               <v-col cols="5" class="text-center">
-                <div class="hf-avatar" aria-label="Enemy">E</div>
+                <div class="hf-avatar hf-avatar--enemy" aria-label="Enemy">E</div>
                 <div class="hf-hp">HP {{ enemyHp }} / {{ enemyMaxHp }}</div>
               </v-col>
             </v-row>
@@ -153,24 +153,14 @@ type Props = {
   modelValue: boolean
   phase: FightPhase
   drops: string[]
-
-  // player HUD
   hp: number
   maxHp: number
-
-  // enemy
   enemyId: number | null
   enemyHp: number
   enemyMaxHp: number
-
-  // enemy combat numbers
   enemyDmg: number
   enemyHitIntervalMs: number
-
-  // weapon buttons
   weapons: WeaponButtonVm[]
-
-  // food count (usable only during combat)
   food: number
 }
 
@@ -214,9 +204,6 @@ function emitUseFood(): void {
   emit('use-food')
 }
 
-/**
- * Per-weapon pulse when it becomes ready (after having been on cooldown).
- */
 const pulse = reactive<Record<string, boolean>>({})
 const hadCooldown = reactive<Record<string, boolean>>({})
 const prevReady = reactive<Record<string, boolean>>({})
@@ -284,55 +271,32 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.hf-card {
-  border-radius: 14px;
-}
-
-.hf-body {
-  padding: 18px 24px 10px;
-}
-
-.hf-narration {
-  font-size: 1.02rem;
-  line-height: 1.4;
-}
-
-.hf-subtle {
-  opacity: 0.8;
-}
-
 .hf-avatar {
   font-size: 56px;
   line-height: 1;
   user-select: none;
+  text-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
 }
 
-.hf-vs {
-  opacity: 0.6;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+.hf-avatar--player {
+  color: rgb(var(--v-theme-primary));
+  text-shadow: 0 0 18px rgba(var(--v-theme-primary), 0.25);
 }
 
-.hf-hp {
-  margin-top: 10px;
-  font-weight: 600;
+.hf-avatar--enemy {
+  color: rgb(var(--v-theme-secondary));
+  text-shadow: 0 0 18px rgba(var(--v-theme-secondary), 0.22);
 }
 
-.hf-actions {
-  display: flex;
-  justify-content: center;
-}
-
-.hf-actions-inner {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-.hf-actions-wrap {
-  flex-wrap: wrap;
-  gap: 10px;
-}
+/* rest of your existing styles unchanged */
+.hf-body { padding: 18px 24px 10px; }
+.hf-narration { font-size: 1.02rem; line-height: 1.4; }
+.hf-subtle { opacity: 0.8; }
+.hf-vs { opacity: 0.6; font-weight: 700; letter-spacing: 0.08em; }
+.hf-hp { margin-top: 10px; font-weight: 600; }
+.hf-actions { display: flex; justify-content: center; }
+.hf-actions-inner { width: 100%; display: flex; justify-content: center; }
+.hf-actions-wrap { flex-wrap: wrap; gap: 10px; }
 
 .hf-food-btn {
   min-width: 190px;
@@ -342,12 +306,9 @@ onBeforeUnmount(() => {
 .hf-weapon-btn {
   position: relative;
   overflow: hidden;
-
   min-width: 190px;
-
   background: rgba(var(--v-theme-on-surface), 0.06) !important;
   opacity: 1 !important;
-
   transition: filter 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
 
@@ -355,79 +316,41 @@ onBeforeUnmount(() => {
   content: '';
   position: absolute;
   inset: 0;
-
   background: rgba(var(--v-theme-primary), 0.18);
-
   transform-origin: left;
   transform: scaleX(var(--hf-weapon-progress, 0));
   transition: transform 50ms linear;
-
   pointer-events: none;
 }
 
-.hf-weapon-btn :deep(.v-btn__content) {
-  position: relative;
-  z-index: 1;
-}
+.hf-weapon-btn :deep(.v-btn__content) { position: relative; z-index: 1; }
 
 .hf-weapon-btn:deep(.v-btn--disabled),
 .hf-weapon-btn.v-btn--disabled {
   filter: grayscale(0.35) saturate(0.75);
 }
 
-.hf-weapon-btn.hf-ready {
-  filter: saturate(1.08);
-}
-
-.hf-weapon-btn.hf-pulse {
-  animation: hf-ready-pulse 650ms ease-out 1;
-}
+.hf-weapon-btn.hf-ready { filter: saturate(1.08); }
+.hf-weapon-btn.hf-pulse { animation: hf-ready-pulse 650ms ease-out 1; }
 
 @keyframes hf-ready-pulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(var(--v-theme-primary), 0.0);
-  }
-  25% {
-    transform: scale(1.03);
-    box-shadow: 0 0 0 10px rgba(var(--v-theme-primary), 0.22);
-  }
-  55% {
-    transform: scale(1.01);
-    box-shadow: 0 0 0 16px rgba(var(--v-theme-primary), 0.10);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(var(--v-theme-primary), 0.0);
-  }
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--v-theme-primary), 0.0); }
+  25% { transform: scale(1.03); box-shadow: 0 0 0 10px rgba(var(--v-theme-primary), 0.22); }
+  55% { transform: scale(1.01); box-shadow: 0 0 0 16px rgba(var(--v-theme-primary), 0.10); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--v-theme-primary), 0.0); }
 }
 
-.hf-drops {
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.14);
-  border-radius: 12px;
-}
+.hf-drops { border: 1px solid rgba(var(--v-theme-on-surface), 0.14); border-radius: 12px; }
+.hf-drop-item { min-height: 40px; }
+.hf-drop-icon { display: inline-block; width: 18px; text-align: center; opacity: 0.7; }
 
-.hf-drop-item {
-  min-height: 40px;
-}
-
-.hf-drop-icon {
-  display: inline-block;
-  width: 18px;
-  text-align: center;
-  opacity: 0.7;
-}
-
-/* empty state */
 .hf-empty-drop {
   display: flex;
   align-items: center;
   gap: 10px;
-
   border: 1px dashed rgba(var(--v-theme-on-surface), 0.22);
   border-radius: 12px;
   padding: 12px 14px;
-
   opacity: 0.85;
 }
 </style>

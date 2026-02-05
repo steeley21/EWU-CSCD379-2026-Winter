@@ -1,0 +1,123 @@
+/* assets/hf-theme.css */
+
+/* Terminal-ish typography across Vuetify */
+.v-application {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  letter-spacing: 0.01em;
+}
+
+/* ---------- Glass utilities ---------- */
+.hf-glass {
+  background: rgba(var(--v-theme-surface), 0.55) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.14);
+  border-radius: 14px;
+
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.hf-glass--soft {
+  background: rgba(var(--v-theme-surface), 0.42) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  border-radius: 14px;
+}
+
+/* Accent border/glow */
+.hf-accent-border {
+  border-color: rgba(var(--v-theme-primary), 0.22) !important;
+}
+
+.hf-accent-glow {
+  box-shadow:
+    0 0 0 1px rgba(var(--v-theme-primary), 0.16),
+    0 0 24px rgba(var(--v-theme-primary), 0.10),
+    0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- Text utilities ---------- */
+.hf-text-neon {
+  color: rgb(var(--v-theme-primary)) !important;
+}
+
+.hf-text-threat {
+  color: rgb(var(--v-theme-secondary)) !important;
+}
+
+.hf-muted {
+  opacity: 0.78;
+}
+
+/* ---------- Hero embellishment ---------- */
+.hf-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.hf-hero::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+
+  background:
+    radial-gradient(620px circle at 18% 18%, rgba(var(--v-theme-primary), 0.12), transparent 55%),
+    radial-gradient(560px circle at 82% 28%, rgba(var(--v-theme-secondary), 0.10), transparent 55%);
+
+  pointer-events: none;
+}
+
+.hf-hero > * {
+  position: relative;
+}
+
+/* ---------- Lists / tables (subtle separators) ---------- */
+.hf-list .v-list-item {
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+.hf-list .v-list-item:last-child {
+  border-bottom: none;
+}
+
+.hf-table .v-table__wrapper {
+  background: transparent !important;
+}
+.hf-table th,
+.hf-table td {
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.10);
+}
+
+/* ---------- Header / drawer surfaces ---------- */
+.hf-bar {
+  background: rgba(var(--v-theme-surface), 0.55) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  border-bottom: 1px solid rgba(var(--v-theme-primary), 0.14) !important;
+}
+
+.hf-drawer-surface {
+  background: rgba(var(--v-theme-surface), 0.70) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  border-right: 1px solid rgba(var(--v-theme-primary), 0.14) !important;
+}
+
+/* ---------- Header nav button visibility ---------- */
+.hf-nav-btn {
+  color: rgba(var(--v-theme-on-surface), 0.92) !important;
+}
+.hf-nav-btn .v-btn__content {
+  color: inherit !important;
+}
+.hf-nav-btn:hover {
+  background: rgba(var(--v-theme-on-surface), 0.05) !important;
+}
+.hf-nav-btn--active {
+  color: rgb(var(--v-theme-primary)) !important;
+}
+

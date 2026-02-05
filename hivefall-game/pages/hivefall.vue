@@ -92,7 +92,7 @@
     <InventoryDialog v-model="inventoryOpen" :food="foodCount" :items="inventoryUI" />
 
     <v-dialog :model-value="gameOver" max-width="420" persistent>
-      <v-card>
+      <v-card class="hf-glass hf-accent-border" variant="flat">
         <v-card-title class="text-h6 text-center">
           {{ status === 'won' ? 'You Win!' : 'Game Over' }}
         </v-card-title>
@@ -103,7 +103,7 @@
         </v-card-text>
 
         <v-card-actions>
-          <v-btn block color="primary" @click="reset">Play Again</v-btn>
+          <v-btn block color="primary" variant="tonal" @click="reset">Play Again</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -292,4 +292,5 @@ function onCellClick(payload: { row: number; col: number; cell: GameCell }): voi
   gap: 8px;
   justify-content: center;
 }
+
 </style>

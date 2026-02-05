@@ -10,8 +10,13 @@ type ThemeName = 'light' | 'dark'
 const THEME_COOKIE = 'hf-theme'
 
 export default defineNuxtPlugin((nuxtApp) => {
-  const themeCookie = useCookie<ThemeName>(THEME_COOKIE, { default: () => 'light' })
-  const startTheme: ThemeName = themeCookie.value === 'dark' ? 'dark' : 'light'
+  // Default to dark going forward (toggle logic still supported)
+  const themeCookie = useCookie<ThemeName>(THEME_COOKIE, { default: () => 'dark' })
+  const startTheme: ThemeName = themeCookie.value === 'light' ? 'light' : 'dark'
+
+  const neonGreen = '#39FF14'
+  const neonMagenta = '#FF2BD6'
+  const neonCyan = '#00E5FF'
 
   const vuetify = createVuetify({
     components,
@@ -19,30 +24,31 @@ export default defineNuxtPlugin((nuxtApp) => {
     theme: {
       defaultTheme: startTheme,
       themes: {
+        // "light" still exists for future reuse — but it stays in the same aesthetic family.
         light: {
           dark: false,
           colors: {
-            background: '#FAFAFC',
-            surface: '#FFFFFF',
-            primary: '#5E35B1',
-            secondary: '#00ACC1',
-            error: '#E53935',
-            warning: '#FB8C00',
-            info: '#1E88E5',
-            success: '#43A047',
+            background: '#0E1014',
+            surface: '#151922',
+            primary: neonGreen,
+            secondary: neonMagenta,
+            info: neonCyan,
+            success: neonGreen,
+            warning: '#FFB300',
+            error: '#FF5252',
           },
         },
         dark: {
           dark: true,
           colors: {
-            background: '#0E0F12',
-            surface: '#16181D',
-            primary: '#B39DDB',
-            secondary: '#4DD0E1',
-            error: '#EF5350',
-            warning: '#FFB74D',
-            info: '#64B5F6',
-            success: '#81C784',
+            background: '#080A0D',
+            surface: '#10141B',
+            primary: neonGreen,
+            secondary: neonMagenta,
+            info: neonCyan,
+            success: neonGreen,
+            warning: '#FFB300',
+            error: '#FF5252',
           },
         },
       },

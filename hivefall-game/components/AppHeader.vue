@@ -1,5 +1,6 @@
+<!-- components/AppHeader.vue -->
 <template>
-  <v-toolbar border density="comfortable">
+  <v-toolbar border density="comfortable" class="hf-bar">
     <v-btn
       icon="mdi-menu"
       variant="text"
@@ -9,45 +10,34 @@
     />
 
     <v-toolbar-title class="text-truncate hf-title">
-      Smiley’s Hivefall
+      Hivefall
     </v-toolbar-title>
-
 
     <v-spacer />
 
-    <!-- Theme toggle -->
-    <v-btn
-      :icon="themeIcon"
-      variant="text"
-      class="me-1"
-      :aria-label="themeLabel"
-      @click="toggleTheme"
-    />
-
-
-
     <!-- Reset (Hivefall only) -->
     <v-btn
-        v-if="isHivefall"
-        variant="outlined"
-        size="small"
-        class="me-2"
-        @click="resetFromHeader"
+      v-if="isHivefall"
+      variant="outlined"
+      size="small"
+      class="me-2"
+      color="primary"
+      @click="resetFromHeader"
     >
-        Reset
+      Reset
     </v-btn>
 
     <!-- Give Up (Hivefall only) -->
     <v-btn
-        v-if="isHivefall"
-        variant="text"
-        size="small"
-        class="me-2"
-        @click="giveUpFromHeader"
+      v-if="isHivefall"
+      variant="text"
+      size="small"
+      class="me-2"
+      color="secondary"
+      @click="giveUpFromHeader"
     >
-        Give Up
+      Give Up
     </v-btn>
-
 
     <!-- Desktop nav -->
     <div class="d-none d-sm-flex ga-1">
@@ -56,6 +46,7 @@
         :key="item.to"
         :to="item.to"
         :variant="isActive(item.to) ? 'outlined' : 'text'"
+        :class="['hf-nav-btn', { 'hf-nav-btn--active': isActive(item.to) }]"
       >
         {{ item.title }}
       </v-btn>
@@ -63,7 +54,7 @@
   </v-toolbar>
 
   <!-- Mobile nav -->
-  <v-navigation-drawer v-model="drawer" temporary class="d-sm-none">
+  <v-navigation-drawer v-model="drawer" temporary class="d-sm-none hf-drawer-surface">
     <v-list nav density="comfortable">
       <v-list-item
         v-for="item in navItems"
@@ -78,12 +69,10 @@
   </v-navigation-drawer>
 </template>
 
-
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHivefallHeaderActions } from '../composables/useHivefallHeaderActions'
-import { useAppTheme } from '../composables/useAppTheme'
 
 type NavItem = {
   title: string
@@ -114,15 +103,15 @@ function resetFromHeader(): void {
 function giveUpFromHeader(): void {
   giveUpFn.value?.()
 }
-
-// Theme
-const { isDark, toggleTheme } = useAppTheme()
-const themeIcon = computed(() => (isDark.value ? 'mdi-weather-sunny' : 'mdi-weather-night'))
-const themeLabel = computed(() => (isDark.value ? 'Switch to light mode' : 'Switch to dark mode'))
 </script>
 
 <style scoped>
 .hf-title {
-  max-width: 60vw; /* gives space for right-side buttons on small screens */
+  max-width: 60vw;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+
+  /* Force “white” title regardless of any inherited button styles */
+  color: rgba(var(--v-theme-on-surface), 0.96) !important;
 }
 </style>

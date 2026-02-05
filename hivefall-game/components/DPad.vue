@@ -1,26 +1,31 @@
 <!-- components/DPad.vue -->
 <template>
-  <div class="dp-wrap" :style="wrapStyle" role="group" aria-label="Movement controls">
+  <div
+    class="dp-wrap hf-glass--soft hf-accent-border"
+    :style="wrapStyle"
+    role="group"
+    aria-label="Movement controls"
+  >
     <div class="dp-row">
-      <v-btn class="dp-btn" icon :disabled="disabled" aria-label="Move up" @click.stop="onUp">
+      <v-btn class="dp-btn" icon variant="outlined" :disabled="disabled" aria-label="Move up" @click.stop="onUp">
         <v-icon icon="mdi-chevron-up" />
       </v-btn>
     </div>
 
     <div class="dp-row dp-mid">
-      <v-btn class="dp-btn" icon :disabled="disabled" aria-label="Move left" @click.stop="onLeft">
+      <v-btn class="dp-btn" icon variant="outlined" :disabled="disabled" aria-label="Move left" @click.stop="onLeft">
         <v-icon icon="mdi-chevron-left" />
       </v-btn>
 
       <div class="dp-center" aria-hidden="true" />
 
-      <v-btn class="dp-btn" icon :disabled="disabled" aria-label="Move right" @click.stop="onRight">
+      <v-btn class="dp-btn" icon variant="outlined" :disabled="disabled" aria-label="Move right" @click.stop="onRight">
         <v-icon icon="mdi-chevron-right" />
       </v-btn>
     </div>
 
     <div class="dp-row">
-      <v-btn class="dp-btn" icon :disabled="disabled" aria-label="Move down" @click.stop="onDown">
+      <v-btn class="dp-btn" icon variant="outlined" :disabled="disabled" aria-label="Move down" @click.stop="onDown">
         <v-icon icon="mdi-chevron-down" />
       </v-btn>
     </div>
@@ -36,7 +41,6 @@ type Props = {
   onDown: () => void
   onLeft: () => void
   onRight: () => void
-
   btnSizePx?: number
   gapPx?: number
   padPx?: number
@@ -60,15 +64,10 @@ const wrapStyle = computed(() => ({
   display: grid;
   gap: var(--dp-gap);
   padding: var(--dp-pad);
-  border-radius: 12px;
-
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.18);
-  background: rgba(var(--v-theme-surface), 0.75);
 
   width: fit-content;
   touch-action: manipulation;
 }
-
 
 .dp-row {
   display: flex;
@@ -91,5 +90,10 @@ const wrapStyle = computed(() => ({
   height: var(--dp-btn);
   min-width: var(--dp-btn);
   border-radius: 14px;
+}
+
+.dp-btn:focus-visible {
+  outline: 2px solid rgba(var(--v-theme-primary), 0.95);
+  outline-offset: 2px;
 }
 </style>

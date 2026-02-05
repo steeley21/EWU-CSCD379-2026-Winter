@@ -1,7 +1,7 @@
 <!-- components/GameGrid.vue -->
 <template>
   <div
-    class="hg-grid-wrap"
+    class="hg-grid-wrap hf-glass--soft hf-accent-border hf-accent-glow"
     :style="wrapStyle"
     role="grid"
     aria-label="Hivefall grid"
@@ -36,14 +36,11 @@ import { createEmptyGrid } from '../types/game'
 import type { GameCell, Terrain } from '../types/game'
 
 type Props = {
-  // If not provided, GameGrid will generate a test grid internally.
   cells?: GameCell[][]
   rows?: number
   cols?: number
-
   cellSizePx?: number
   gapPx?: number
-
   playerChar?: string
   infectedChar?: string
   enemyChar?: string
@@ -77,10 +74,8 @@ const localCells = ref<GameCell[][]>([])
 function rebuildLocalGrid(): void {
   const rows = props.rows
   const cols = props.cols
-
   const g = createEmptyGrid(rows, cols, '.')
 
-  // Smiley in the center (0-based indexing)
   const centerR = Math.floor(rows / 2)
   const centerC = Math.floor(cols / 2)
   g[centerR][centerC].entity = 'player'
@@ -88,7 +83,6 @@ function rebuildLocalGrid(): void {
   localCells.value = g
 }
 
-// Build once, and rebuild if rows/cols change
 watch(
   () => [props.rows, props.cols],
   () => rebuildLocalGrid(),
@@ -96,7 +90,6 @@ watch(
 )
 
 const displayCells = computed<GameCell[][]>(() => {
-  // If parent passes a grid, use it. Otherwise use the internal test grid.
   return props.cells && props.cells.length ? props.cells : localCells.value
 })
 
@@ -130,10 +123,6 @@ function glyphFor(cell: GameCell): string {
   display: grid;
   gap: var(--hg-gap);
   padding: 12px;
-  border-radius: 12px;
-
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.18);
-  background: rgb(var(--v-theme-surface));
 
   overflow-x: auto;
   width: fit-content;
@@ -153,18 +142,27 @@ function glyphFor(cell: GameCell): string {
   align-items: center;
   justify-content: center;
 
-  border-radius: 8px;
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.18);
-  background: transparent;
+  border-radius: 6px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.22);
+  background: rgba(0, 0, 0, 0.18);
 
   color: rgb(var(--v-theme-on-surface));
-
   padding: 0;
   cursor: pointer;
 
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   line-height: 1;
   user-select: none;
+
+  transition: border-color 120ms ease, box-shadow 120ms ease, transform 80ms ease;
+}
+
+.hg-cell:hover {
+  border-color: rgba(var(--v-theme-primary), 0.35);
+}
+
+.hg-cell:active {
+  transform: translateY(0.5px);
 }
 
 .hg-glyph {
@@ -172,32 +170,53 @@ function glyphFor(cell: GameCell): string {
   transform: translateY(-0.5px);
 }
 
-/* Terrain styling (subtle tint) */
-.hg-cell[data-terrain="^"] { background: rgba(var(--v-theme-on-surface), 0.06); }
-.hg-cell[data-terrain="~"] { background: rgba(var(--v-theme-on-surface), 0.04); }
-.hg-cell[data-terrain="#"] { background: rgba(var(--v-theme-on-surface), 0.10); }
+/* Terrain (subtle) */
+.hg-cell[data-terrain="^"] { background: rgba(var(--v-theme-on-surface), 0.05); }
+.hg-cell[data-terrain="~"] { background: rgba(var(--v-theme-on-surface), 0.035); }
+.hg-cell[data-terrain="#"] { background: rgba(var(--v-theme-on-surface), 0.075); }
 
-/* Entity styling (clear, theme-friendly) */
-.hg-cell[data-entity="player"],
+/* Player: FILLED neon green */
+.hg-cell[data-entity="player"] {
+  background: rgba(var(--v-theme-primary), 0.55);
+  border-color: rgba(var(--v-theme-primary), 0.95);
+  box-shadow:
+    0 0 0 1px rgba(var(--v-theme-primary), 0.45),
+    0 0 18px rgba(var(--v-theme-primary), 0.28);
+  color: rgba(0, 0, 0, 0.88);
+  font-weight: 800;
+}
+
+/* Infected: OUTLINED neon green */
 .hg-cell[data-entity="infected"] {
-  background: rgba(var(--v-theme-primary), 0.18);
-  font-weight: 700;
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(var(--v-theme-primary), 0.9);
+  box-shadow: 0 0 14px rgba(var(--v-theme-primary), 0.18);
+  color: rgb(var(--v-theme-primary));
+  font-weight: 800;
 }
 
+/* Enemy: OUTLINED neon magenta (secondary) */
 .hg-cell[data-entity="enemy"] {
-  background: rgba(var(--v-theme-error), 0.14);
-  font-weight: 700;
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(var(--v-theme-secondary), 0.9);
+  box-shadow: 0 0 14px rgba(var(--v-theme-secondary), 0.18);
+  color: rgb(var(--v-theme-secondary));
+  font-weight: 800;
 }
 
+/* Resource: cyan-ish (info) */
 .hg-cell[data-entity="resource"] {
-  background: rgba(var(--v-theme-secondary), 0.14);
-  font-weight: 700;
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(var(--v-theme-info), 0.85);
+  box-shadow: 0 0 12px rgba(var(--v-theme-info), 0.14);
+  color: rgb(var(--v-theme-info));
+  font-weight: 800;
 }
 
 .hg-cell[data-state="blocked"] { opacity: 0.6; }
 
 .hg-cell:focus-visible {
-  outline: 2px solid rgba(var(--v-theme-primary), 0.9);
+  outline: 2px solid rgba(var(--v-theme-primary), 0.95);
   outline-offset: 2px;
 }
 </style>
