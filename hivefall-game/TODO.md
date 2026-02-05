@@ -105,7 +105,7 @@
 
 ### X DevOps improvements (optional)
 - [ ] Environment variables / config notes in README
-- [ ] PR checks that run `npm run test`
+- [ ] PR checks that run `npm run test:ci:ci`
 
 ---
 
@@ -141,5 +141,5 @@
 ---
 
 ## ✅ Documentation
-- [x] README updated to match current game state
+- [x] README updated to match current game state + current folder layout
 - [x] This TODO plan document added

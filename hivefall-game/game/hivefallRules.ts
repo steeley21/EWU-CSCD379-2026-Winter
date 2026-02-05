@@ -10,6 +10,7 @@ export type SpawnPacingRules = {
 export type CombatRules = {
   enemyMaxHp: number
   playerHitDamage: number
+  playerHitCooldownMs: number
   enemyHitDamage: number
   enemyHitIntervalMs: number
 }
@@ -47,6 +48,7 @@ export const defaultHivefallRules: HivefallRules = {
   combat: {
     enemyMaxHp: 5,
     playerHitDamage: 1,
+    playerHitCooldownMs: 800,
     enemyHitDamage: 2,
     enemyHitIntervalMs: 1500,
   },

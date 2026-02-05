@@ -1,27 +1,34 @@
+// hivefall-game/game/hivefallTypes.ts
 import type { GameCell } from '../types/game'
 
-// Represents a position on the game grid
 export type GridPos = { row: number; col: number }
 
-// Represents an enemy in the game
 export type Enemy = {
   id: number
   pos: GridPos
 }
 
-// Represents an ongoing fight between the player and an enemy
+export type FightPhase = 'interlude' | 'combat' | 'won'
+
 export type FightState = null | {
   enemyId: number
   enemyHp: number
   enemyMaxHp: number
+
+  phase: FightPhase
+
+  // timers (tick-based)
+  playerHitCooldownMsRemaining: number
+  enemyHitMsUntilNext: number
+
+  // placeholder drops for won screen
+  drops: string[]
 }
 
-// Possible statuses of the game
 export type GameStatus = 'playing' | 'won' | 'lost'
 
-// Represents the overall state of the Hivefall game
 export type HivefallState = {
-  grid: import('../types/game').GameCell[][]
+  grid: GameCell[][]
   playerPos: GridPos
   enemies: Enemy[]
   moveCount: number

@@ -1,3 +1,4 @@
+// hivefall-game/tests/enemyAI.tests.ts
 import { describe, it, expect } from 'vitest'
 import { nextEnemyStepToward } from '../game/enemyAi'
 import type { GridPos } from '../game/hivefallTypes'

@@ -87,6 +87,7 @@ Core logic lives in `/game` as **pure TypeScript** for unit testing:
 - `game/engine.ts` – pure state transitions (`step`, `createInitialState`, fight resolution, end-state evaluation)
 - `game/movement.ts` – movement/bounds helpers (pure)
 - `game/collision.ts` – collision helpers (fight triggers; terrain/resources hooks later)
+- `game/combat.ts` – fight state + damage/infection rules (pure)
 - `game/enemyAi.ts` – enemy chase “move 1 step toward player”
 - `game/spawn.ts` – edge spawn selection + retry logic
 - `game/pacing.ts` – spawn pacing helpers (interval + acceleration controls)
@@ -101,7 +102,10 @@ Vue wrapper:
 ## Repo structure (current)
 
 ```text
-/
+hivefall-game/
+  .nuxt/              # generated (Nuxt dev/build)
+  .output/            # generated (Nuxt build output)
+  api/                # reserved for Phase 2 backend work (ASP.NET) / API assets
   assets/
   components/
     AppHeader.vue
@@ -109,11 +113,14 @@ Vue wrapper:
     FightDialog.vue
     GameGrid.vue
   composables/
+    useAppTheme.ts
     useHivefallEngine.ts
     useHivefallHeaderActions.ts
     usePlayerControls.ts
+  dist/               # generated (if using static output)
   game/
     collision.ts
+    combat.ts
     enemyAi.ts
     engine.ts
     hivefallRules.ts
@@ -133,7 +140,7 @@ Vue wrapper:
   tests/
     collision.test.ts
     endStates.test.ts
-    enemyAi.test.ts
+    enemyAI.test.ts
     engine.test.ts
     fightResolution.test.ts
     movement.test.ts
@@ -142,11 +149,18 @@ Vue wrapper:
   types/
     game.ts
     shims-vue.d.ts
+  .gitignore
   app.vue
   nuxt.config.ts
   package.json
+  package-lock.json
+  README.md
+  TODO.md
+  startup.sh
   tsconfig.json
+  node_modules/        # generated (not committed)
 ```
+
 
 ---
 
@@ -171,7 +185,7 @@ npm run test
 ```
 
 Current test coverage includes:
-- Enemy chase step behavior (`game/enemyAi.ts`)
+- Enemy chase step behavior (`game/enemyAi.ts`, tested in `tests/enemyAI.test.ts`)
 - Edge spawning + blocked retries (`game/spawn.ts`)
 - Pacing + acceleration rules (`game/pacing.ts`)
 - Movement helpers (`game/movement.ts`)

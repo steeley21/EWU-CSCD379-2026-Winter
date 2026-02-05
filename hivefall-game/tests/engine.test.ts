@@ -1,10 +1,42 @@
+// hivefall-game/tests/engine.test.ts
 import { describe, it, expect } from 'vitest'
 import { createInitialState, step } from '../game/engine'
 import { mergeHivefallRules } from '../game/hivefallRules'
+import type { HivefallRules } from '../game/hivefallRules'
+import type { HivefallState } from '../game/hivefallTypes'
+import type { MoveDir } from '../game/engine'
 
+/**
+ * Deterministic RNG helper for spawn tests.
+ * Returns values in a loop (0..1 range expected).
+ */
 function seqRng(values: number[]): () => number {
   let i = 0
   return () => values[i++ % values.length]
+}
+
+/**
+ * Applies `n` moves and asserts they were all successful (moveCount advanced).
+ * Returns the resulting state.
+ */
+function applySuccessfulMoves(
+  state: HivefallState,
+  rules: HivefallRules,
+  n: number,
+  move: (i: number, s: HivefallState) => MoveDir,
+  rng?: () => number
+): HivefallState {
+  const startMoves = state.moveCount
+  let s = state
+
+  for (let i = 0; i < n; i++) {
+    const dir = move(i, s)
+    s = step(s, rules, dir, rng ? { rng } : undefined)
+  }
+
+  // "Successful moves" means moveCount increased exactly by n.
+  expect(s.moveCount).toBe(startMoves + n)
+  return s
 }
 
 describe('engine', () => {
@@ -32,21 +64,31 @@ describe('engine', () => {
 
     const before = s
     s = step(s, rules, 'up') // out of bounds, no advance
-    expect(s).toBe(before)   // returns same object when no-op
+    expect(s).toBe(before) // returns same object when no-op
     expect(s.moveCount).toBe(2)
   })
 
   it('spawns first enemy after N successful moves (appears on edge)', () => {
-    const rules = mergeHivefallRules({ rows: 10, cols: 10, firstSpawnAfterMoves: 5, maxEnemies: 10 })
+    const rules = mergeHivefallRules({
+      rows: 10,
+      cols: 10,
+      firstSpawnAfterMoves: 5,
+      maxEnemies: 10,
+    })
+
+    // rng sequence: edge=0 (top), col=0.5 (~middle) -> (0,5)
+    const rng = seqRng([0, 0.5])
 
     let s = createInitialState(rules)
 
-    // rng: edge=0 (top), col=5 -> (0,5)
-    const rng = seqRng([0.0, 0.5])
-
-    for (let i = 0; i < 5; i++) {
-      s = step(s, rules, 'right', { rng })
-    }
+    // Alternate right/left to guarantee in-bounds success
+    s = applySuccessfulMoves(
+      s,
+      rules,
+      rules.firstSpawnAfterMoves,
+      (i) => (i % 2 === 0 ? 'right' : 'left'),
+      rng
+    )
 
     expect(s.enemies.length).toBe(1)
     expect(s.enemies[0].pos.row).toBe(0) // top edge

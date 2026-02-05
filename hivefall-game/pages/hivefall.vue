@@ -35,19 +35,29 @@
 
     <FightDialog
       v-model="fightOpen"
+      :phase="(fightPhase ?? 'interlude')"
+      :drops="fightDrops"
+
       :enemy-id="fightEnemyId"
       :hp="playerHp"
       :max-hp="playerMaxHp"
-      :infected="infectedCount"
-      :max-enemies="maxEnemies"
       :enemy-hp="fightEnemyHp"
       :enemy-max-hp="fightEnemyMaxHp"
+
       :player-dmg="rules.combat.playerHitDamage"
       :enemy-dmg="rules.combat.enemyHitDamage"
       :enemy-hit-interval-ms="rules.combat.enemyHitIntervalMs"
-      @attack="onAttack"
+
+      :attack-ready="attackReady"
+      :attack-cooldown-remaining-ms="attackCooldownRemainingMs"
+      :attack-cooldown-ms="attackCooldownMs"
+
+      @engage="onEngage"
+      @hit="onHit"
       @run="onRun"
     />
+
+
 
 
 
@@ -134,11 +144,17 @@ const {
   rules,
   grid, reset,
   moveUp, moveDown, moveLeft, moveRight,
-  fight, clearFight, resolveFight,
+  fight, fightPhase, clearFight, resolveFight, engageFight,
   status, giveUp,
   moveCount, infectedCount,
-  playerHp, playerMaxHp, maxEnemies, 
+  playerHp, playerMaxHp, maxEnemies,
+
+  attackReady,
+  attackCooldownRemainingMs,
+  attackCooldownMs,
 } = useHivefallEngine({ rows: ROWS, cols: COLS, terrain: '.' })
+
+const fightDrops = computed(() => fight.value?.drops ?? [])
 
 const fightEnemyHp = computed(() => fight.value?.enemyHp ?? 0)
 const fightEnemyMaxHp = computed(() => fight.value?.enemyMaxHp ?? 0)
@@ -178,15 +194,19 @@ usePlayerControls({
 })
 
 
-function onAttack(): void {
+function onEngage(): void {
+  engageFight()
+}
+
+function onHit(): void {
+  if (!attackReady.value) return
   resolveFight('attack')
-  console.log('attack invoked')
 }
 
 function onRun(): void {
   resolveFight('run')
-  console.log('run invoked')
 }
+
 
 function onCellClick(payload: { row: number; col: number; cell: GameCell }): void {
   console.log('clicked', payload)

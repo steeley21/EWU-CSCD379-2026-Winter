@@ -1,11 +1,12 @@
-// composables/useHivefallEngine.ts
+// hivefall-game/composables/useHivefallEngine.ts
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { mergeHivefallRules, type HivefallRules } from '../game/hivefallRules'
 import {
   createInitialState,
   step as stepPure,
-  clearFight as clearFightPure,
+  endFight as endFightPure,
   resolveFight as resolveFightPure,
+  engageFight as engageFightPure,
   giveUp as giveUpPure,
   tickEnemyHit as tickEnemyHitPure,
   type MoveDir,
@@ -18,6 +19,8 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
 
   const grid = computed(() => state.value.grid)
   const fight = computed(() => state.value.fight)
+  const fightPhase = computed(() => state.value.fight?.phase ?? null)
+
   const status = computed(() => state.value.status)
   const playerHp = computed(() => state.value.playerHp)
   const playerMaxHp = computed(() => rules.playerMaxHp)
@@ -26,59 +29,73 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
   const infectedCount = computed(() => state.value.infectedCount)
 
   // -----------------------------
-  // Enemy hit timer (fight loop)
+  // Player attack cooldown (UI)
   // -----------------------------
-  let enemyTimer: number | null = null
+  const attackCooldownMs = computed(() => rules.combat.playerHitCooldownMs)
+  const attackCooldownRemainingMs = computed(() => state.value.fight?.playerHitCooldownMsRemaining ?? 0)
+  const attackReady = computed(() => {
+    return (
+      state.value.status === 'playing' &&
+      state.value.fight?.phase === 'combat' &&
+      attackCooldownRemainingMs.value <= 0
+    )
+  })
 
-  function stopEnemyTimer(): void {
-    if (enemyTimer != null) {
-      window.clearInterval(enemyTimer)
-      enemyTimer = null
+  // -----------------------------
+  // Fight tick timer (ONLY in combat)
+  // -----------------------------
+  let fightTimer: number | null = null
+  const FIGHT_TICK_MS = 50
+
+  function stopFightTimer(): void {
+    if (fightTimer != null) {
+      window.clearInterval(fightTimer)
+      fightTimer = null
     }
   }
 
-  function startEnemyTimer(): void {
-    stopEnemyTimer()
+  function startFightTimer(): void {
+    stopFightTimer()
     if (typeof window === 'undefined') return
 
-    const ms = Math.max(50, rules.combat.enemyHitIntervalMs)
-
-    enemyTimer = window.setInterval(() => {
-      state.value = tickEnemyHitPure(state.value, rules)
-    }, ms)
+    fightTimer = window.setInterval(() => {
+      state.value = tickEnemyHitPure(state.value, rules, FIGHT_TICK_MS)
+    }, FIGHT_TICK_MS)
   }
 
   watch(
-    () => (state.value.status === 'playing' ? state.value.fight?.enemyId ?? null : null),
-    (enemyId) => {
-      if (enemyId != null) startEnemyTimer()
-      else stopEnemyTimer()
+    () => (state.value.status === 'playing' ? state.value.fight?.phase ?? null : null),
+    (phase) => {
+      if (phase === 'combat') startFightTimer()
+      else stopFightTimer()
     },
     { immediate: true, flush: 'sync' }
   )
 
-
   onBeforeUnmount(() => {
-    stopEnemyTimer()
+    stopFightTimer()
   })
 
   function reset(): void {
-    stopEnemyTimer()
+    stopFightTimer()
     state.value = createInitialState(rules)
   }
 
   function clearFight(): void {
-    stopEnemyTimer()
-    state.value = clearFightPure(state.value)
+    stopFightTimer()
+    state.value = endFightPure(state.value, rules)
   }
 
   function resolveFight(action: FightAction): void {
-    // watch() will stop the timer automatically if fight clears
     state.value = resolveFightPure(state.value, rules, action)
   }
 
+  function engageFight(): void {
+    state.value = engageFightPure(state.value, rules)
+  }
+
   function giveUp(): void {
-    stopEnemyTimer()
+    stopFightTimer()
     state.value = giveUpPure(state.value)
   }
 
@@ -94,14 +111,21 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
 
     grid,
     fight,
+    fightPhase,
     status,
     playerHp,
     playerMaxHp,
     maxEnemies,
 
+    // UI helpers
+    attackCooldownMs,
+    attackCooldownRemainingMs,
+    attackReady,
+
     reset,
     clearFight,
     resolveFight,
+    engageFight,
     giveUp,
 
     moveUp: () => move('up'),

@@ -1,9 +1,15 @@
-// game/engine.ts
+// hivefall-game/game/engine.ts
 import { createEmptyGrid } from '../types/game'
 import type { GameCell } from '../types/game'
 import type { HivefallRules } from './hivefallRules'
 import type { Enemy, GridPos, HivefallState } from './hivefallTypes'
-import { startFight, playerHit, runFromFight, enemyHitTick } from './combat'
+import {
+  startFight,
+  engageFight as engageFightCombat,
+  playerHit,
+  runFromFight,
+  applyEnemyHitOnce,
+} from './combat'
 import { findEdgeSpawnPos } from './spawn'
 import { nextEnemyStepToward } from './enemyAi'
 import { advanceSpawnPacing, accelerateAfterSpawn } from './pacing'
@@ -13,7 +19,6 @@ import type { MoveDir } from './movement'
 export type { MoveDir } from './movement'
 
 import { resolveEnemyEnterTile, resolvePlayerEnterTile } from './collision'
-
 
 export type StepOptions = {
   rng?: () => number
@@ -62,36 +67,22 @@ export function createInitialState(rules: HivefallRules): HivefallState {
   }
 }
 
-
-
-/**
- * Applies one "turn" (player move attempt).
- * Notes:
- * - If fight is active, the state does not advance.
- * - A successful move increments moveCount and advances enemies.
- * - Spawn pacing advances on successful moves.
- * - Spawn happens AFTER enemy movement so new enemies "appear on the edge"
- *   and do not immediately move inward on the same turn they spawn.
- */
 export function step(
   state: HivefallState,
   rules: HivefallRules,
   dir: MoveDir,
   opts: StepOptions = {}
 ): HivefallState {
-  // If not playing, no state changes.
   if (state.status !== 'playing') return state
-  
-  // If we're in a fight state, freeze world progression.
+
+  // Any active fight (interlude/combat/won) freezes world progression.
   if (state.fight) return state
 
-  // --- player movement (bounds) ---
   const move = attemptMove(state.playerPos, dir, rules.rows, rules.cols)
   if (!move.ok) return state
 
   const to = move.to
 
-  // --- player collision (terrain/enemy/resources later) ---
   const playerCollision = resolvePlayerEnterTile(state.grid, state.enemies, to)
 
   if (playerCollision.kind === 'blocked') return state
@@ -100,7 +91,6 @@ export function step(
     return startFightEvaluated(state, rules, playerCollision.enemyId)
   }
 
-  // --- apply player move ---
   let g = cloneGrid(state.grid)
   setEntity(g, state.playerPos, null)
   setEntity(g, to, 'player')
@@ -112,20 +102,15 @@ export function step(
     moveCount: state.moveCount + 1,
   }
 
-  // --- enemies move 1 step (based on updated player position) ---
   ;(() => {
     if (nextState.enemies.length === 0) return
 
     let grid2 = cloneGrid(nextState.grid)
-
-    // Prevent enemy stacking by tracking occupied cells as we move enemies.
     const occupied = new Set(nextState.enemies.map(e => `${e.pos.row},${e.pos.col}`))
-
     const updated: Enemy[] = []
 
     for (let i = 0; i < nextState.enemies.length; i++) {
       const e = nextState.enemies[i]
-
       const isBlockedByEnemy = (p: GridPos) => occupied.has(`${p.row},${p.col}`)
 
       const proposed = nextEnemyStepToward(
@@ -136,7 +121,6 @@ export function step(
         isBlockedByEnemy
       )
 
-      // Collision resolution (terrain + player collision)
       const enemyCollision = resolveEnemyEnterTile(grid2, nextState.playerPos, e.id, proposed)
 
       if (enemyCollision.kind === 'fight') {
@@ -149,20 +133,16 @@ export function step(
         return
       }
 
-
       if (enemyCollision.kind === 'blocked') {
-        // Treat as no move
         updated.push(e)
         continue
       }
 
-      // No move
       if (samePos(proposed, e.pos)) {
         updated.push(e)
         continue
       }
 
-      // Move enemy
       occupied.delete(`${e.pos.row},${e.pos.col}`)
       occupied.add(`${proposed.row},${proposed.col}`)
 
@@ -175,10 +155,9 @@ export function step(
     nextState = { ...nextState, enemies: updated, grid: grid2 }
   })()
 
-  // If fight triggered during enemy movement, do not advance spawn pacing/spawn.
+  // If fight triggered during enemy movement, do not advance pacing/spawn.
   if (nextState.fight) return nextState
 
-  // --- spawn pacing (successful player moves only) ---
   const pacing = advanceSpawnPacing({
     currentInterval: nextState.currentSpawnInterval,
     movesSinceLastSpawn: nextState.movesSinceLastSpawn,
@@ -197,13 +176,10 @@ export function step(
     const pos = findEdgeSpawnPos(
       rules.rows,
       rules.cols,
-      (p) =>
-        samePos(p, nextState.playerPos) ||
-        !!isOccupiedByEnemy(enemies, p),
+      (p) => samePos(p, nextState.playerPos) || !!isOccupiedByEnemy(enemies, p),
       rng,
       50
     )
-
 
     if (pos) {
       const grid4 = cloneGrid(grid3)
@@ -216,9 +192,8 @@ export function step(
       interval = accelerateAfterSpawn(interval, spawnedTotalAfterThisSpawn, {
         minInterval: rules.spawnPacing.minInterval,
         decreaseEverySpawns: rules.spawnPacing.decreaseEverySpawns,
-        step: rules.spawnPacing.step
+        step: rules.spawnPacing.step,
       })
-
     }
   }
 
@@ -242,7 +217,6 @@ function startFightEvaluated(state: HivefallState, rules: HivefallRules, enemyId
 function evaluateEndState(state: HivefallState, rules: HivefallRules): HivefallState {
   if (state.status !== 'playing') return state
 
-  // lose beats win
   if (state.playerHp <= 0) return { ...state, status: 'lost' }
 
   const spawnedTotal = state.nextEnemyId - 1
@@ -250,6 +224,7 @@ function evaluateEndState(state: HivefallState, rules: HivefallRules): HivefallS
   const allInfected = state.infectedCount >= rules.maxEnemies
   const noLiveEnemies = state.enemies.length === 0
 
+  // NOTE: still requires fight to be cleared (so Continue matters)
   if (!state.fight && hasSpawnedAll && allInfected && noLiveEnemies) {
     return { ...state, status: 'won' }
   }
@@ -267,26 +242,76 @@ export function resolveFight(
   if (state.status !== 'playing') return state
   if (!state.fight) return state
 
-  const next = action === 'run'
-    ? runFromFight(state)
-    : playerHit(state, rules)
+  // Once we're in "won", only Continue should close it (endFight()).
+  if (state.fight.phase === 'won') return state
 
-  return evaluateEndState(next, rules)
+  if (action === 'run') {
+    return evaluateEndState(runFromFight(state), rules)
+  }
+
+  // Attack is only valid once you've engaged (combat)
+  if (state.fight.phase !== 'combat') return state
+
+  return evaluateEndState(playerHit(state, rules), rules)
 }
 
+// interlude -> combat (enemy starts attacking only after this)
+export function engageFight(state: HivefallState, rules: HivefallRules): HivefallState {
+  return evaluateEndState(engageFightCombat(state, rules), rules)
+}
+
+// used when the dialog closes ("Continue") to allow win evaluation immediately
+export function endFight(state: HivefallState, rules: HivefallRules): HivefallState {
+  if (!state.fight) return state
+  return evaluateEndState({ ...state, fight: null }, rules)
+}
 
 export function giveUp(state: HivefallState): HivefallState {
   if (state.status !== 'playing') return state
   return { ...state, status: 'lost', fight: null }
 }
 
+// Force-clear without evaluating win (generally use endFight() for Continue)
 export function clearFight(state: HivefallState): HivefallState {
   if (!state.fight) return state
   return { ...state, fight: null }
 }
 
-export function tickEnemyHit(state: HivefallState, rules: HivefallRules): HivefallState {
-  const next = enemyHitTick(state, rules)
+// Tick-based fight loop (cooldowns + enemy hits). Only runs during combat phase.
+export function tickEnemyHit(state: HivefallState, rules: HivefallRules, tickMs: number): HivefallState {
+  if (state.status !== 'playing') return state
+  if (!state.fight) return state
+  if (state.fight.phase !== 'combat') return state
+
+  const dt = Math.max(0, tickMs)
+
+  // decrement timers
+  const nextCooldown = Math.max(0, (state.fight.playerHitCooldownMsRemaining ?? 0) - dt)
+  let nextUntil = (state.fight.enemyHitMsUntilNext ?? rules.combat.enemyHitIntervalMs) - dt
+
+  let next: HivefallState = {
+    ...state,
+    fight: {
+      ...state.fight,
+      playerHitCooldownMsRemaining: nextCooldown,
+      enemyHitMsUntilNext: nextUntil,
+    },
+  }
+
+  // apply enemy hits if the timer elapsed (support catch-up if dt is large)
+  while (next.fight && next.fight.phase === 'combat' && next.fight.enemyHitMsUntilNext <= 0) {
+    next = applyEnemyHitOnce(next, rules)
+    if (!next.fight || next.fight.phase !== 'combat') break
+
+    nextUntil = next.fight.enemyHitMsUntilNext + rules.combat.enemyHitIntervalMs
+    next = {
+      ...next,
+      fight: {
+        ...next.fight,
+        enemyHitMsUntilNext: nextUntil,
+      },
+    }
+  }
+
   return evaluateEndState(next, rules)
 }
-

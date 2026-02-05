@@ -35,7 +35,6 @@ jobs:
         run: npx nuxi prepare
 
       - name: Tests
-        continue-on-error: true
         working-directory: hivefall-game
         run: npm run test:ci
 
