@@ -10,9 +10,11 @@ import {
   giveUp as giveUpPure,
   tickEnemyHit as tickEnemyHitPure,
   grantWeapon as grantWeaponPure,
+  chooseWonOutcome as chooseWonOutcomePure,
   type MoveDir,
   type FightAction,
 } from '../game/engine'
+import type { WonChoice } from '../game/hivefallTypes'
 
 export type WeaponButtonVm = {
   id: WeaponId
@@ -38,13 +40,18 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
   const grid = computed(() => state.value.grid)
   const fight = computed(() => state.value.fight)
   const fightPhase = computed(() => state.value.fight?.phase ?? null)
+  const fightWonChoice = computed(() => state.value.fight?.wonChoice ?? null)
 
   const status = computed(() => state.value.status)
   const playerHp = computed(() => state.value.playerHp)
   const playerMaxHp = computed(() => rules.playerMaxHp)
   const maxEnemies = computed(() => rules.maxEnemies)
   const moveCount = computed(() => state.value.moveCount)
+
+  // total over time
   const infectedCount = computed(() => state.value.infectedCount)
+  // active on board
+  const infectedActiveCount = computed(() => state.value.infecteds.length)
 
   const foodCount = computed(() => state.value.inventory.food ?? 0)
 
@@ -134,6 +141,10 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
     state.value = engageFightPure(state.value, rules)
   }
 
+  function chooseWonOutcome(choice: WonChoice): void {
+    state.value = chooseWonOutcomePure(state.value, rules, choice)
+  }
+
   function giveUp(): void {
     stopFightTimer()
     state.value = giveUpPure(state.value)
@@ -150,16 +161,20 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
   return {
     rules,
     state,
-    moveCount,
-    infectedCount,
 
     grid,
     fight,
     fightPhase,
+    fightWonChoice,
+
     status,
     playerHp,
     playerMaxHp,
     maxEnemies,
+    moveCount,
+
+    infectedCount,
+    infectedActiveCount,
 
     foodCount,
     inventoryUI,
@@ -170,6 +185,7 @@ export function useHivefallEngine(overrides: Partial<HivefallRules> = {}) {
     clearFight,
     resolveFight,
     engageFight,
+    chooseWonOutcome,
     giveUp,
 
     moveUp: () => move('up'),

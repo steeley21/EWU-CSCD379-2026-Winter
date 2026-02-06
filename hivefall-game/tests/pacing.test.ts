@@ -1,3 +1,4 @@
+// tests/pacing.test.ts
 import { describe, it, expect } from 'vitest'
 import { advanceSpawnPacing, accelerateAfterSpawn } from '../game/pacing'
 

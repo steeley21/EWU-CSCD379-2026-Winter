@@ -16,11 +16,16 @@ export type CombatRules = {
 
   enemyHitDamage: number
   enemyHitIntervalMs: number
+
+  // NEW: infected ally auto-hit damage (low; can still kill weakened enemies)
+  infectedHitDamage: number
 }
 
 export type DropRules = {
   /**
    * Chance (0..1) for +1 food drop on enemy defeat
+   * NOTE: With Harvest/Acquire, Food is now granted via Harvest (guaranteed).
+   * This is kept for compatibility but is not used by the new victory flow.
    */
   foodChance: number
 
@@ -71,13 +76,9 @@ export type HivefallRules = {
   // weapon library (inventory decides what's usable)
   weapons: Record<WeaponId, WeaponDef>
 
-  // NEW: drops
   drops: DropRules
 }
 
-/**
- * Overrides type that lets you patch individual weapons without providing the whole map.
- */
 export type HivefallRulesOverrides =
   & Partial<Omit<HivefallRules, 'spawnPacing' | 'combat' | 'weapons' | 'drops'>>
   & {
@@ -112,6 +113,8 @@ export const defaultHivefallRules: HivefallRules = {
 
     enemyHitDamage: 2,
     enemyHitIntervalMs: 1500,
+
+    infectedHitDamage: 1,
   },
 
   weapons: {
@@ -120,7 +123,7 @@ export const defaultHivefallRules: HivefallRules = {
       name: 'Hit',
       damage: 1,
       cooldownMs: 800,
-      dropWeight: 0, // never drops
+      dropWeight: 0,
     },
     sword: {
       id: 'sword',
@@ -191,7 +194,6 @@ export function mergeHivefallRules(overrides: HivefallRulesOverrides = {}): Hive
     weapons: { ...defaultHivefallRules.weapons },
   }
 
-  // Patch weapons individually (deep-merge per weapon id)
   const w = overrides.weapons ?? {}
   for (const id of Object.keys(w) as WeaponId[]) {
     const base = merged.weapons[id]

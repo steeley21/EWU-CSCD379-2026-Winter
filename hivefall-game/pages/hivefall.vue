@@ -1,4 +1,3 @@
-<!-- pages/hivefall.vue -->
 <template>
   <v-container fluid class="hf-page pa-2">
     <v-row
@@ -66,6 +65,13 @@
             :on-left="moveLeft"
             :on-right="moveRight"
           />
+
+          <!-- Lightweight HUD -->
+          <div class="hf-subtle mt-2 text-center">
+            <div>Moves: {{ moveCount }}</div>
+            <div>Total Infected: {{ infectedCount }}</div>
+            <div>Active Infected: {{ infectedActiveCount }}</div>
+          </div>
         </div>
       </v-col>
     </v-row>
@@ -74,6 +80,7 @@
       v-model="fightOpen"
       :phase="(fightPhase ?? 'interlude')"
       :drops="fightDrops"
+      :won-choice="fightWonChoice"
       :weapons="weaponsUI"
       :food="foodCount"
       :enemy-id="fightEnemyId"
@@ -87,6 +94,9 @@
       @attack="onAttack"
       @use-food="onUseFood"
       @run="onRun"
+      @harvest="onHarvest"
+      @acquire="onAcquire"
+      @continue="onContinueWon"
     />
 
     <InventoryDialog v-model="inventoryOpen" :food="foodCount" :items="inventoryUI" />
@@ -99,7 +109,8 @@
 
         <v-card-text class="text-body-2 text-center">
           <div>Moves: {{ moveCount }}</div>
-          <div class="mt-1">Infected: {{ infectedCount }}</div>
+          <div class="mt-1">Total Infected: {{ infectedCount }}</div>
+          <div class="mt-1">Active Infected: {{ infectedActiveCount }}</div>
         </v-card-text>
 
         <v-card-actions>
@@ -177,13 +188,16 @@ const {
   moveRight,
   fight,
   fightPhase,
+  fightWonChoice,
   clearFight,
   resolveFight,
   engageFight,
+  chooseWonOutcome,
   status,
   giveUp,
   moveCount,
   infectedCount,
+  infectedActiveCount,
   playerHp,
   playerMaxHp,
   weaponsUI,
@@ -257,6 +271,19 @@ function onRun(): void {
   resolveFight({ kind: 'run' })
 }
 
+function onHarvest(): void {
+  chooseWonOutcome('harvest')
+}
+
+function onAcquire(): void {
+  chooseWonOutcome('acquire')
+}
+
+function onContinueWon(): void {
+  // Fight dialog closes only after a Harvest/Acquire choice
+  clearFight()
+}
+
 function onCellClick(payload: { row: number; col: number; cell: GameCell }): void {
   console.log('clicked', payload)
 }
@@ -292,5 +319,4 @@ function onCellClick(payload: { row: number; col: number; cell: GameCell }): voi
   gap: 8px;
   justify-content: center;
 }
-
 </style>

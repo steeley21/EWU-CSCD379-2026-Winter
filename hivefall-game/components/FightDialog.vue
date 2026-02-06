@@ -95,7 +95,33 @@
             The enemy collapses. For a moment, they almost look relieved.
           </div>
 
-          <div class="hf-subtle mt-3">Drops:</div>
+          <div class="hf-subtle mt-3">
+            Choose what to do:
+          </div>
+
+          <div class="mt-3 d-flex flex-wrap ga-2">
+            <v-btn
+              :ripple="false"
+              variant="outlined"
+              :disabled="wonChoice != null"
+              :color="wonChoice === 'harvest' ? 'primary' : undefined"
+              @click="$emit('harvest')"
+            >
+              Harvest (Food +1)
+            </v-btn>
+
+            <v-btn
+              :ripple="false"
+              variant="outlined"
+              :disabled="wonChoice != null"
+              :color="wonChoice === 'acquire' ? 'primary' : undefined"
+              @click="$emit('acquire')"
+            >
+              Acquire (Join the Hive)
+            </v-btn>
+          </div>
+
+          <div class="hf-subtle mt-4">Gained:</div>
 
           <template v-if="hasDrops">
             <v-list density="comfortable" class="hf-drops mt-2" lines="one">
@@ -111,7 +137,8 @@
           <template v-else>
             <div class="hf-empty-drop mt-2">
               <span class="hf-drop-icon" aria-hidden="true">✦</span>
-              The enemy had nothing of value. You loot some scraps from their pockets and move on.
+              <span v-if="wonChoice == null">No rewards yet — choose Harvest or Acquire.</span>
+              <span v-else>No additional items gained.</span>
             </div>
           </template>
         </v-card-text>
@@ -122,7 +149,8 @@
               :ripple="false"
               color="primary"
               variant="tonal"
-              @click="$emit('update:modelValue', false)"
+              :disabled="wonChoice == null"
+              @click="$emit('continue')"
             >
               Continue
             </v-btn>
@@ -136,6 +164,7 @@
 <script setup lang="ts">
 import { computed, reactive, watch, onBeforeUnmount } from 'vue'
 import type { WeaponId } from '../game/hivefallRules'
+import type { WonChoice } from '../game/hivefallTypes'
 
 type FightPhase = 'interlude' | 'combat' | 'won'
 
@@ -153,6 +182,8 @@ type Props = {
   modelValue: boolean
   phase: FightPhase
   drops: string[]
+  wonChoice: WonChoice | null
+
   hp: number
   maxHp: number
   enemyId: number | null
@@ -172,6 +203,9 @@ const emit = defineEmits<{
   (e: 'engage'): void
   (e: 'attack', weaponId: WeaponId): void
   (e: 'use-food'): void
+  (e: 'harvest'): void
+  (e: 'acquire'): void
+  (e: 'continue'): void
 }>()
 
 const hasDrops = computed(() => (props.drops?.length ?? 0) > 0)
@@ -288,7 +322,6 @@ onBeforeUnmount(() => {
   text-shadow: 0 0 18px rgba(var(--v-theme-secondary), 0.22);
 }
 
-/* rest of your existing styles unchanged */
 .hf-body { padding: 18px 24px 10px; }
 .hf-narration { font-size: 1.02rem; line-height: 1.4; }
 .hf-subtle { opacity: 0.8; }

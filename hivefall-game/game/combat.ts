@@ -2,25 +2,8 @@
 import type { HivefallRules, WeaponId } from './hivefallRules'
 import type { HivefallState } from './hivefallTypes'
 
-function cloneGrid(grid: HivefallState['grid']): HivefallState['grid'] {
-  return grid.map(row => row.map(cell => ({ ...cell })))
-}
-
-function setEntity(
-  g: HivefallState['grid'],
-  p: { row: number; col: number },
-  entity: HivefallState['grid'][number][number]['entity']
-): void {
-  g[p.row][p.col] = { ...g[p.row][p.col], entity }
-}
-
 function getCharges(state: HivefallState, weaponId: WeaponId): number {
   return state.inventory.charges[weaponId] ?? 0
-}
-
-function addFood(inv: HivefallState['inventory'], amt: number): HivefallState['inventory'] {
-  const nextFood = Math.max(0, (inv.food ?? 0) + amt)
-  return { ...inv, food: nextFood }
 }
 
 function grantWeaponToInventory(
@@ -35,9 +18,7 @@ function grantWeaponToInventory(
   let nextWeapons = inv.weapons
   let nextCharges = inv.charges
 
-  if (!has) {
-    nextWeapons = [...inv.weapons, weaponId]
-  }
+  if (!has) nextWeapons = [...inv.weapons, weaponId]
 
   if (def.consumable) {
     const cur = inv.charges[weaponId] ?? 0
@@ -45,7 +26,6 @@ function grantWeaponToInventory(
   }
 
   if (nextWeapons === inv.weapons && nextCharges === inv.charges) return inv
-
   return { ...inv, weapons: nextWeapons, charges: nextCharges }
 }
 
@@ -67,7 +47,11 @@ function pickWeaponDrop(rules: HivefallRules, rng: () => number): WeaponId | nul
   return entries[entries.length - 1]?.id ?? null
 }
 
-function rollDrops(
+/**
+ * Victory reward roll used by Harvest/Acquire resolution.
+ * (Food is now handled by Harvest directly; this only rolls for weapons.)
+ */
+export function rollWeaponVictoryDrop(
   inv: HivefallState['inventory'],
   rules: HivefallRules,
   rng: () => number
@@ -75,13 +59,6 @@ function rollDrops(
   let nextInv = inv
   const labels: string[] = []
 
-  // Food roll
-  if ((rules.drops?.foodChance ?? 0) > 0 && rng() < (rules.drops.foodChance ?? 0)) {
-    nextInv = addFood(nextInv, 1)
-    labels.push('Food (+1)')
-  }
-
-  // Weapon roll
   if ((rules.drops?.weaponChance ?? 0) > 0 && rng() < (rules.drops.weaponChance ?? 0)) {
     const wid = pickWeaponDrop(rules, rng)
     if (wid) {
@@ -97,13 +74,15 @@ export function startFight(state: HivefallState, rules: HivefallRules, enemyId: 
   if (state.status !== 'playing') return state
   if (state.fight) return state
 
-  const max = rules.combat.enemyMaxHp
+  const enemy = state.enemies.find(e => e.id === enemyId)
+  const max = enemy?.maxHp ?? rules.combat.enemyMaxHp
+  const hp = enemy?.hp ?? max
 
   return {
     ...state,
     fight: {
       enemyId,
-      enemyHp: max,
+      enemyHp: hp,
       enemyMaxHp: max,
       phase: 'interlude',
 
@@ -112,6 +91,7 @@ export function startFight(state: HivefallState, rules: HivefallRules, enemyId: 
       enemyHitMsUntilNext: rules.combat.enemyHitIntervalMs,
 
       drops: [],
+      wonChoice: null,
     },
   }
 }
@@ -203,9 +183,17 @@ export function playerAttack(
     nextCharges = { ...nextCharges, [weaponId]: Math.max(0, current - 1) }
   }
 
+  // Persist enemy HP on the enemy instance
+  const enemyId = state.fight.enemyId
+  const enemiesUpdated = state.enemies.map(e => {
+    if (e.id !== enemyId) return e
+    return { ...e, hp: Math.max(0, nextEnemyHp) }
+  })
+
   if (nextEnemyHp > 0) {
     return {
       ...state,
+      enemies: enemiesUpdated,
       inventory: { ...state.inventory, charges: nextCharges },
       fight: {
         ...state.fight,
@@ -216,27 +204,12 @@ export function playerAttack(
     }
   }
 
-  const enemyId = state.fight.enemyId
-  const enemy = state.enemies.find(e => e.id === enemyId)
-  if (!enemy) return { ...state, fight: null }
-
-  const g = cloneGrid(state.grid)
-  setEntity(g, enemy.pos, 'infected')
-
-  // base inventory after spending any consumable used to kill
-  const baseInv: HivefallState['inventory'] = {
-    ...state.inventory,
-    charges: nextCharges,
-  }
-
-  const { nextInv, labels } = rollDrops(baseInv, rules, rng)
-
+  // Enemy defeated: switch to "won" phase.
+  // Harvest/Acquire choice will resolve removal + rewards.
   return {
     ...state,
-    grid: g,
-    enemies: state.enemies.filter(e => e.id !== enemyId),
-    infectedCount: state.infectedCount + 1,
-    inventory: nextInv,
+    enemies: enemiesUpdated,
+    inventory: { ...state.inventory, charges: nextCharges },
     fight: {
       ...state.fight,
       phase: 'won',
@@ -244,7 +217,8 @@ export function playerAttack(
       weaponCooldownMsRemaining: nextCooldowns,
       enemyStunMsRemaining: 0,
       enemyHitMsUntilNext: rules.combat.enemyHitIntervalMs,
-      drops: labels, // empty => UI shows ??? placeholders
+      drops: [],
+      wonChoice: null,
     },
   }
 }
@@ -252,7 +226,6 @@ export function playerAttack(
 export function applyEnemyHitOnce(state: HivefallState, rules: HivefallRules): HivefallState {
   if (state.status !== 'playing') return state
   if (!state.fight || state.fight.phase !== 'combat') return state
-
   if ((state.fight.enemyStunMsRemaining ?? 0) > 0) return state
 
   const dmg = rules.combat.enemyHitDamage
