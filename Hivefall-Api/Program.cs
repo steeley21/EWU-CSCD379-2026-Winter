@@ -25,17 +25,12 @@ builder.Services.AddCors(options =>
     });
 });
 
-var conn = builder.Configuration.GetConnectionString("DefaultConnection");
-if (string.IsNullOrWhiteSpace(conn))
-    throw new InvalidOperationException("Missing connection string 'DefaultConnection'");
-
+var conn = builder.Configuration.GetConnectionString("DefaultConnection")
+           ?? throw new InvalidOperationException("Missing connection string 'DefaultConnection'");
 
 builder.Services.AddDbContext<HivefallDbContext>(options =>
 {
-    if (builder.Environment.IsDevelopment())
-        options.UseSqlite(conn);
-    else
-        options.UseSqlServer(conn);
+    options.UseSqlServer(conn);
 });
 
 

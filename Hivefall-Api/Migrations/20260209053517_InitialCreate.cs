@@ -15,13 +15,13 @@ namespace Hivefall_Api.Migrations
                 name: "RunResults",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    PlayerName = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
-                    Won = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MoveCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    InfectedCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    FinishedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PlayerName = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    Won = table.Column<bool>(type: "bit", nullable: false),
+                    MoveCount = table.Column<int>(type: "int", nullable: false),
+                    InfectedCount = table.Column<int>(type: "int", nullable: false),
+                    FinishedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
