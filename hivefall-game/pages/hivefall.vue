@@ -1,3 +1,4 @@
+<!-- pages/hivefall.vue -->
 <template>
   <v-container fluid class="hf-page pa-2">
     <v-row
@@ -15,7 +16,6 @@
           :cells="grid"
           :cell-size-px="cellSizePx"
           :gap-px="gridGapPx"
-          @cell-click="onCellClick"
         />
       </v-col>
 
@@ -30,28 +30,6 @@
               @click="inventoryOpen = true"
             >
               Inventory
-            </v-btn>
-
-            <v-select
-              v-model="debugWeaponId"
-              :items="debugWeaponOptions"
-              item-title="title"
-              item-value="value"
-              density="compact"
-              hide-details
-              variant="outlined"
-              style="min-width: 180px"
-              class="me-2"
-              :disabled="status !== 'playing'"
-            />
-
-            <v-btn
-              variant="tonal"
-              size="small"
-              :disabled="status !== 'playing' || !debugWeaponId"
-              @click="onDebugAddWeapon"
-            >
-              Add
             </v-btn>
           </div>
 
@@ -101,20 +79,64 @@
 
     <InventoryDialog v-model="inventoryOpen" :food="foodCount" :items="inventoryUI" />
 
-    <v-dialog :model-value="gameOver" max-width="420" persistent>
+    <!-- Game Over + Submit Score -->
+    <v-dialog :model-value="gameOver" max-width="520" persistent>
       <v-card class="hf-glass hf-accent-border" variant="flat">
         <v-card-title class="text-h6 text-center">
           {{ status === 'won' ? 'You Win!' : 'Game Over' }}
         </v-card-title>
 
-        <v-card-text class="text-body-2 text-center">
-          <div>Moves: {{ moveCount }}</div>
-          <div class="mt-1">Total Infected: {{ infectedCount }}</div>
-          <div class="mt-1">Active Infected: {{ infectedActiveCount }}</div>
+        <v-card-text class="text-body-2">
+          <div class="text-center">
+            <div>Moves: {{ moveCount }}</div>
+            <div class="mt-1">Total Infected: {{ infectedCount }}</div>
+            <div class="mt-1">Active Infected: {{ infectedActiveCount }}</div>
+          </div>
+
+          <v-divider class="my-4" />
+
+          <div class="text-subtitle-2 mb-2">Submit your score</div>
+
+          <v-text-field
+            v-model="nameInput"
+            label="Name on leaderboard"
+            variant="outlined"
+            density="comfortable"
+            maxlength="32"
+            counter="32"
+            hide-details="auto"
+            :disabled="submitting || submitted"
+          />
+
+          <div v-if="submitError" class="mt-2 hf-muted">
+            {{ submitError }}
+          </div>
+
+          <div v-else-if="submitted" class="mt-2 hf-muted">
+            Submitted! 🎉
+          </div>
         </v-card-text>
 
-        <v-card-actions>
-          <v-btn block color="primary" variant="tonal" @click="reset">Play Again</v-btn>
+        <v-card-actions class="px-4 pb-4 d-flex flex-wrap ga-2">
+          <v-btn
+            color="primary"
+            variant="tonal"
+            :loading="submitting"
+            :disabled="submitted || submitting"
+            @click="submitScore"
+          >
+            Submit Score
+          </v-btn>
+
+          <v-btn variant="outlined" to="/leaderboard">
+            View Leaderboard
+          </v-btn>
+
+          <v-spacer />
+
+          <v-btn color="primary" variant="outlined" @click="reset">
+            Play Again
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -122,7 +144,6 @@
 </template>
 
 <script setup lang="ts">
-/// <reference types="vue" />
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 
@@ -131,7 +152,6 @@ import DPad from '../components/DPad.vue'
 import FightDialog from '../components/FightDialog.vue'
 import InventoryDialog from '../components/InventoryDialog.vue'
 
-import type { GameCell } from '../types/game'
 import type { WeaponId } from '../game/hivefallRules'
 import { useHivefallEngine } from '../composables/useHivefallEngine'
 import { usePlayerControls } from '../composables/usePlayerControls'
@@ -177,7 +197,7 @@ const cellSizePx = computed(() => {
   return Math.max(10, Math.min(24, Math.min(byW, byH)))
 })
 
-const { resetFn, giveUpFn } = useHivefallHeaderActions()
+const { giveUpFn } = useHivefallHeaderActions()
 
 const {
   rules,
@@ -203,7 +223,6 @@ const {
   playerMaxHp,
   weaponsUI,
   inventoryUI,
-  grantWeapon,
   foodCount,
 } = useHivefallEngine({ rows: ROWS, cols: COLS, terrain: '.' })
 
@@ -222,29 +241,13 @@ const fightOpen = computed<boolean>({
 })
 
 const fightEnemyId = computed(() => fight.value?.enemyId ?? null)
-
 const inventoryOpen = ref(false)
 
-const debugWeaponOptions = computed(() => {
-  return (Object.values(rules.weapons) as { id: WeaponId; name: string }[])
-    .filter(w => w.id !== 'hit')
-    .map(w => ({ title: w.name, value: w.id }))
-})
-
-const debugWeaponId = ref<WeaponId>('sword')
-
-function onDebugAddWeapon(): void {
-  if (status.value !== 'playing') return
-  grantWeapon(debugWeaponId.value)
-}
-
 onMounted(() => {
-  resetFn.value = reset
   giveUpFn.value = giveUp
 })
 
 onBeforeUnmount(() => {
-  resetFn.value = null
   giveUpFn.value = null
 })
 
@@ -281,51 +284,64 @@ function onAcquire(): void {
 }
 
 function onContinueWon(): void {
-  // Fight dialog closes only after a Harvest/Acquire choice
   clearFight()
 }
 
-function onCellClick(payload: { row: number; col: number; cell: GameCell }): void {
-  console.log('clicked', payload)
-}
-
-/**
- * Auto-submit run results when the game ends (won/lost).
- * This keeps the pure engine free of network concerns and submits once per run.
- */
+/* ---- Submit score step ---- */
 const { submitRun } = useHivefallApi()
-const playerName = useCookie<string>('hf-player-name', { default: () => 'Player' })
-const submittedThisRun = ref(false)
+
+const playerNameCookie = useCookie<string>('hf-player-name', { default: () => '' })
+const nameInput = ref(playerNameCookie.value || '')
+
+const submitting = ref(false)
+const submitted = ref(false)
+const submitError = ref<string | null>(null)
 
 watch(
   status,
-  async (s) => {
+  (s) => {
     if (s === 'playing') {
-      submittedThisRun.value = false
+      submitting.value = false
+      submitted.value = false
+      submitError.value = null
       return
     }
 
-    const isTerminal = s === 'won' || s === 'lost'
-    if (!isTerminal) return
-
-    if (submittedThisRun.value) return
-    submittedThisRun.value = true
-
-    try {
-      await submitRun({
-        playerName: playerName.value || 'Player',
-        won: s === 'won',
-        moveCount: moveCount.value,
-        infectedCount: infectedCount.value,
-      })
-    } catch (e) {
-      console.error('Failed to submit run:', e)
-      // Optional: allow retry if API was down
-      // submittedThisRun.value = false
-    }
+    // when game ends, prefill from cookie
+    nameInput.value = playerNameCookie.value || ''
   },
   { flush: 'post' }
 )
+
+async function submitScore(): Promise<void> {
+  if (submitting.value || submitted.value) return
+
+  submitting.value = true
+  submitError.value = null
+
+  const trimmed = (nameInput.value || '').trim().slice(0, 32)
+  const finalName = trimmed.length ? trimmed : 'Player'
+
+  // persist name for next run
+  playerNameCookie.value = finalName
+  nameInput.value = finalName
+
+  try {
+    await submitRun({
+      playerName: finalName,
+      won: status.value === 'won',
+      moveCount: moveCount.value,
+      infectedCount: infectedCount.value,
+    })
+    submitted.value = true
+  } catch (e) {
+    console.error('Failed to submit run:', e)
+    submitError.value = 'Failed to submit score. You can try again, or just play again.'
+    submitted.value = false
+  } finally {
+    submitting.value = false
+  }
+}
 </script>
 
 <style scoped>

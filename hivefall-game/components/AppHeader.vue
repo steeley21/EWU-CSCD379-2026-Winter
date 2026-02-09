@@ -15,18 +15,6 @@
 
     <v-spacer />
 
-    <!-- Reset (Hivefall only) -->
-    <v-btn
-      v-if="isHivefall"
-      variant="outlined"
-      size="small"
-      class="me-2"
-      color="primary"
-      @click="resetFromHeader"
-    >
-      Reset
-    </v-btn>
-
     <!-- Give Up (Hivefall only) -->
     <v-btn
       v-if="isHivefall"
@@ -82,7 +70,7 @@ type NavItem = {
 const drawer = ref(false)
 const route = useRoute()
 
-const { resetFn, giveUpFn } = useHivefallHeaderActions()
+const { giveUpFn } = useHivefallHeaderActions()
 
 const navItems: NavItem[] = [
   { title: 'Home', to: '/' },
@@ -97,9 +85,6 @@ function isActive(to: string): boolean {
 
 const isHivefall = computed(() => route.path === '/hivefall')
 
-function resetFromHeader(): void {
-  resetFn.value?.()
-}
 function giveUpFromHeader(): void {
   giveUpFn.value?.()
 }
@@ -110,8 +95,6 @@ function giveUpFromHeader(): void {
   max-width: 60vw;
   letter-spacing: 0.06em;
   font-weight: 700;
-
-  /* Force “white” title regardless of any inherited button styles */
   color: rgba(var(--v-theme-on-surface), 0.96) !important;
 }
 </style>

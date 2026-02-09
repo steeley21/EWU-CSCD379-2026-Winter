@@ -1,3 +1,4 @@
+<!-- pages/index.vue -->
 <template>
   <v-container fluid class="py-6">
     <v-row justify="center">
@@ -5,9 +6,9 @@
 
         <!-- Hero -->
         <v-card class="hf-glass hf-accent-border hf-accent-glow hf-hero" variant="flat">
-          <v-card-title class="text-h5 hf-text-neon">Smiley’s Hivefall</v-card-title>
+          <v-card-title class="text-h5 hf-text-neon">Hivefall</v-card-title>
           <v-card-text class="text-body-1 hf-muted">
-            You are Smiley — an alien crash survivor. Infect every enemy to expand the hive mind.
+            A turn-based ASCII-grid survival game. Move carefully—each step advances the world.
           </v-card-text>
 
           <v-card-actions class="ga-2">
@@ -21,10 +22,12 @@
           <v-card-title class="text-h6">How to play</v-card-title>
           <v-card-text class="hf-muted">
             <ul class="pl-5">
-              <li>Move one tile at a time (arrow keys / mobile D-pad).</li>
-              <li>Enemies trigger combat. Win to infect them.</li>
-              <li>Resources upgrade stats and unlock new attack options.</li>
-              <li>Win by infecting all enemies. Lose if Smiley dies.</li>
+              <li>Move 1 tile per input (Arrow keys/WASD on desktop, D-pad on mobile).</li>
+              <li>Enemies spawn from the edge and chase you as the game advances.</li>
+              <li>Colliding with an enemy starts a fight: Run or Attack.</li>
+              <li>After winning a fight, choose <strong>Harvest</strong> (Food +1) or <strong>Acquire</strong> (enemy joins as an infected ally).</li>
+              <li>Food can be used in combat to heal (+10). Weapons may drop on victory.</li>
+              <li>Win once all enemies have spawned and none remain. Lose if your HP hits 0.</li>
             </ul>
           </v-card-text>
         </v-card>
