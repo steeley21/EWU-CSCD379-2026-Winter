@@ -1,22 +1,33 @@
-export default {
+// hivefall-game/nuxt.config.ts
+import { defineNuxtConfig } from 'nuxt/config'
+
+export default defineNuxtConfig({
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://localhost:7076',
+      /**
+       * IMPORTANT:
+       * - This value is baked into the static build during `npm run generate`.
+       * - In GitHub Actions, set NUXT_PUBLIC_API_BASE to your Azure App Service URL.
+       */
+      apiBase: process.env.NUXT_PUBLIC_API_BASE ?? '',
     },
   },
+
   ssr: false,
+
   nitro: {
-    prerender: { routes: [] }
+    prerender: { routes: [] },
   },
-  css: [
-    'vuetify/styles',
-    '~/assets/hf-theme.css',
-  ],
+
+  css: ['vuetify/styles', '~/assets/hf-theme.css'],
+
   build: {
-    transpile: ['vuetify']
+    transpile: ['vuetify'],
   },
+
   vite: {
-    define: { 'process.env.DEBUG': false }
+    define: { 'process.env.DEBUG': false },
   },
-  compatibilityDate: '2026-02-03'
-} as const
+
+  compatibilityDate: '2026-02-03',
+})

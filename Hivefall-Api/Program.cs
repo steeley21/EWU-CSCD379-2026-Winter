@@ -14,16 +14,21 @@ builder.Services.AddSwaggerGen();
 
 // CORS (allow Nuxt dev server)
 const string ClientCors = "ClientCors";
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(ClientCors, policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000") // Nuxt dev default
+            .WithOrigins(
+                "http://localhost:3000",
+                "https://blue-cliff-07b9aa10f.4.azurestaticapps.net"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
+
 
 var conn = builder.Configuration.GetConnectionString("DefaultConnection")
            ?? throw new InvalidOperationException("Missing connection string 'DefaultConnection'");
