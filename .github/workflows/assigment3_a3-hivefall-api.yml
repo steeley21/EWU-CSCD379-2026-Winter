@@ -41,15 +41,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write
+      contents: read
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: .net-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -65,7 +65,15 @@ jobs:
           slot-name: 'Production'
           package: .
 
+      - name: Set startup command
+        run: az webapp config set -g Cscd379 -n A3-Hivefall-Api --startup-file "dotnet Hivefall-Api.dll"
+
+      - name: Restart app
+        run: az webapp restart -g Cscd379 -n A3-Hivefall-Api
+
+
           
+
 
 
 
