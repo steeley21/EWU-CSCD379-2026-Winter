@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Hivefall-Api.csproj" />
+  <Project Path="Hivefall-Api.Tests/Hivefall-Api.Tests.csproj" />
+</Solution>

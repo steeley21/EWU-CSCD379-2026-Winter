@@ -1,0 +1,60 @@
+// Program.cs
+using Hivefall_Api.Data;
+using Hivefall_Api.Services;
+using Microsoft.EntityFrameworkCore;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+// Controllers (API)
+builder.Services.AddControllers();
+
+// Swagger (API documentation UI)
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// CORS (allow Nuxt dev server)
+const string ClientCors = "ClientCors";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(ClientCors, policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:3000") // Nuxt dev default
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+// Wire EF up
+builder.Services.AddDbContext<HivefallDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("HivefallDb")));
+
+builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+
+WebApplication app = builder.Build();
+
+// Swagger in development
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+// Recommended pipeline order
+app.UseHttpsRedirection();
+
+app.UseRouting();
+
+app.UseCors(ClientCors);
+
+app.UseAuthorization();
+
+// Map API endpoints
+app.MapControllers();
+
+// Simple health check endpoint (useful for Azure + quick checks)
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+app.Run();
+
+public partial class Program{ }

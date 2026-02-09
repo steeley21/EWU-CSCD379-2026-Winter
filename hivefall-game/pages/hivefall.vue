@@ -123,7 +123,7 @@
 
 <script setup lang="ts">
 /// <reference types="vue" />
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 
 import GameGrid from '../components/GameGrid.vue'
@@ -137,6 +137,7 @@ import { useHivefallEngine } from '../composables/useHivefallEngine'
 import { usePlayerControls } from '../composables/usePlayerControls'
 import { useHivefallHeaderActions } from '../composables/useHivefallHeaderActions'
 import { defaultHivefallRules } from '../game/hivefallRules'
+import { useHivefallApi } from '../composables/useHivefallApi'
 
 const ROWS = defaultHivefallRules.rows
 const COLS = defaultHivefallRules.cols
@@ -287,6 +288,44 @@ function onContinueWon(): void {
 function onCellClick(payload: { row: number; col: number; cell: GameCell }): void {
   console.log('clicked', payload)
 }
+
+/**
+ * Auto-submit run results when the game ends (won/lost).
+ * This keeps the pure engine free of network concerns and submits once per run.
+ */
+const { submitRun } = useHivefallApi()
+const playerName = useCookie<string>('hf-player-name', { default: () => 'Player' })
+const submittedThisRun = ref(false)
+
+watch(
+  status,
+  async (s) => {
+    if (s === 'playing') {
+      submittedThisRun.value = false
+      return
+    }
+
+    const isTerminal = s === 'won' || s === 'lost'
+    if (!isTerminal) return
+
+    if (submittedThisRun.value) return
+    submittedThisRun.value = true
+
+    try {
+      await submitRun({
+        playerName: playerName.value || 'Player',
+        won: s === 'won',
+        moveCount: moveCount.value,
+        infectedCount: infectedCount.value,
+      })
+    } catch (e) {
+      console.error('Failed to submit run:', e)
+      // Optional: allow retry if API was down
+      // submittedThisRun.value = false
+    }
+  },
+  { flush: 'post' }
+)
 </script>
 
 <style scoped>
