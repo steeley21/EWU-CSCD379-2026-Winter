@@ -23,7 +23,7 @@ jobs:
         with:
           dotnet-version: '10.x'
 
-        - name: Build with dotnet
+      - name: Build with dotnet
         working-directory: ./Hivefall-Api
         run: dotnet build Hivefall-Api.csproj --configuration Release
 
@@ -66,6 +66,7 @@ jobs:
           package: .
 
           
+
 
 
 
