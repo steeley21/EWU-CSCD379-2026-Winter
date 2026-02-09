@@ -25,13 +25,26 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Wire EF up
+var conn = builder.Configuration.GetConnectionString("DefaultConnections");
+
 builder.Services.AddDbContext<HivefallDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("HivefallDb")));
+{
+    if (builder.Environment.IsDevelopment())
+        options.UseSqlite(conn);
+    else
+        options.UseSqlServer(conn);
+});
+
 
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 
 WebApplication app = builder.Build();
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<HivefallDbContext>();
+    db.Database.Migrate();
+}
+
 
 // Swagger in development
 if (app.Environment.IsDevelopment())
