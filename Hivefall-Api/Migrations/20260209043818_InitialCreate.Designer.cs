@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Hivefall_Api.Migrations
 {
     [DbContext(typeof(HivefallDbContext))]
-    [Migration("20260209042348_SyncModel")]
-    partial class SyncModel
+    [Migration("20260209043818_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

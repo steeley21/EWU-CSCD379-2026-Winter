@@ -25,7 +25,10 @@ builder.Services.AddCors(options =>
     });
 });
 
-var conn = builder.Configuration.GetConnectionString("DefaultConnections");
+var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(conn))
+    throw new InvalidOperationException("Missing connection string 'DefaultConnection'");
+
 
 builder.Services.AddDbContext<HivefallDbContext>(options =>
 {
