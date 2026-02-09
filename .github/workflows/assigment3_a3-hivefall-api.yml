@@ -28,6 +28,7 @@ jobs:
         run: dotnet build --configuration Release
 
       - name: dotnet publish
+        working-directory: ./Hivefall-Api
         run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
@@ -65,3 +66,4 @@ jobs:
           package: .
 
           
+
