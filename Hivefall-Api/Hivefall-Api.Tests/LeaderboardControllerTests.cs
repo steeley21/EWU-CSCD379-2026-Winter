@@ -6,21 +6,17 @@ using Xunit;
 
 namespace Hivefall_Api.Tests;
 
-public class LeaderboardControllerTests : IClassFixture<HivefallApiFactory>
+public class LeaderboardControllerTests
 {
-    private readonly HttpClient _client;
-
-    public LeaderboardControllerTests(HivefallApiFactory factory)
-    {
-        _client = factory.CreateClient();
-    }
-
     private sealed record LeaderboardEnvelope(IReadOnlyList<RunResultDto> entries, DateTime serverTimeUtc);
 
     [Fact]
     public async Task Post_Then_Get_Returns_Inserted_Row()
     {
-        var post = await _client.PostAsJsonAsync("/api/Leaderboard", new
+        using var factory = new HivefallApiFactory();
+        using var client = factory.CreateClient();
+
+        var post = await client.PostAsJsonAsync("/api/Leaderboard", new
         {
             playerName = "Kate",
             won = true,
@@ -35,7 +31,7 @@ public class LeaderboardControllerTests : IClassFixture<HivefallApiFactory>
         Assert.True(created!.Id > 0);
         Assert.Equal("Kate", created.PlayerName);
 
-        var get = await _client.GetAsync("/api/Leaderboard?limit=25");
+        var get = await client.GetAsync("/api/Leaderboard?limit=25");
         Assert.Equal(HttpStatusCode.OK, get.StatusCode);
 
         var payload = await get.Content.ReadFromJsonAsync<LeaderboardEnvelope>();
@@ -46,20 +42,23 @@ public class LeaderboardControllerTests : IClassFixture<HivefallApiFactory>
     [Fact]
     public async Task Get_Respects_Limit()
     {
-        // Insert 3
+        using var factory = new HivefallApiFactory();
+        using var client = factory.CreateClient();
+
         for (var i = 0; i < 3; i++)
         {
-            var post = await _client.PostAsJsonAsync("/api/Leaderboard", new
+            var post = await client.PostAsJsonAsync("/api/Leaderboard", new
             {
                 playerName = $"P{i}",
                 won = true,
                 moveCount = i,
                 infectedCount = 0
             });
+
             Assert.Equal(HttpStatusCode.Created, post.StatusCode);
         }
 
-        var get = await _client.GetAsync("/api/Leaderboard?limit=2");
+        var get = await client.GetAsync("/api/Leaderboard?limit=2");
         Assert.Equal(HttpStatusCode.OK, get.StatusCode);
 
         var payload = await get.Content.ReadFromJsonAsync<LeaderboardEnvelope>();

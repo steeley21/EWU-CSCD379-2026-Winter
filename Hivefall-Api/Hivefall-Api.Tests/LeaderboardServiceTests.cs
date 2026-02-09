@@ -2,7 +2,6 @@
 using Hivefall_Api.Dto;
 using Hivefall_Api.Models;
 using Hivefall_Api.Services;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -10,28 +9,21 @@ namespace Hivefall_Api.Tests;
 
 public class LeaderboardServiceTests
 {
-    private static (SqliteConnection conn, HivefallDbContext db) CreateDb()
+    private static HivefallDbContext CreateDb()
     {
-        var conn = new SqliteConnection("DataSource=:memory:");
-        conn.Open();
-
         var options = new DbContextOptionsBuilder<HivefallDbContext>()
-            .UseSqlite(conn)
+            .UseInMemoryDatabase($"SvcTests_{Guid.NewGuid():N}")
             .Options;
 
         var db = new HivefallDbContext(options);
         db.Database.EnsureCreated();
-
-        return (conn, db);
+        return db;
     }
 
     [Fact]
     public async Task SubmitAsync_Normalizes_Name_And_Clamps_Counts()
     {
-        var (conn, db) = CreateDb();
-        await using var _ = conn;
-        await using var __ = db;
-
+        await using var db = CreateDb();
         var svc = new LeaderboardService(db);
 
         var dto = new CreateRunResultDto(
@@ -56,10 +48,7 @@ public class LeaderboardServiceTests
     [Fact]
     public async Task SubmitAsync_Defaults_Blank_Name_To_Player()
     {
-        var (conn, db) = CreateDb();
-        await using var _ = conn;
-        await using var __ = db;
-
+        await using var db = CreateDb();
         var svc = new LeaderboardService(db);
 
         var dto = new CreateRunResultDto(
@@ -78,9 +67,7 @@ public class LeaderboardServiceTests
     [Fact]
     public async Task GetTopAsync_Clamps_Limit_To_100()
     {
-        var (conn, db) = CreateDb();
-        await using var _ = conn;
-        await using var __ = db;
+        await using var db = CreateDb();
 
         for (var i = 0; i < 110; i++)
         {
@@ -105,11 +92,8 @@ public class LeaderboardServiceTests
     [Fact]
     public async Task GetTopAsync_Sorts_Wins_First_Then_Lower_Moves_Then_Recent()
     {
-        var (conn, db) = CreateDb();
-        await using var _ = conn;
-        await using var __ = db;
+        await using var db = CreateDb();
 
-        // Winner but worse moves (should come after better winner)
         db.RunResults.Add(new RunResultEntity
         {
             PlayerName = "WinnerSlow",
@@ -119,17 +103,15 @@ public class LeaderboardServiceTests
             FinishedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
         });
 
-        // Winner better moves (should be #1)
         db.RunResults.Add(new RunResultEntity
         {
             PlayerName = "WinnerFast",
             Won = true,
             MoveCount = 10,
             InfectedCount = 1,
-            FinishedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            FinishedAtUtc = new DateTime(2026, 1, 1, 0, 1, 0, DateTimeKind.Utc),
         });
 
-        // Loser (should be after winners)
         db.RunResults.Add(new RunResultEntity
         {
             PlayerName = "Loser",
