@@ -2,6 +2,14 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
+  app: {
+    head: {
+      link: [
+        { rel: 'icon', href: '/favicon.ico' },
+      ],
+    },
+  },
+
   runtimeConfig: {
     public: {
       /**
