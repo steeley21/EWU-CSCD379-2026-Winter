@@ -69,3 +69,18 @@ jobs:
           app-name: 'A3-Hivefall-Api'
           slot-name: 'Production'
           package: .
+      
+      - name: Warm up API (wake app + SQL)
+        run: |
+          API_URL="https://YOUR-APP-NAME.azurewebsites.net"
+          for i in {1..12}; do
+            echo "Warmup attempt $i..."
+            if curl -fsS "$API_URL/health" >/dev/null; then
+              echo "Warmup OK"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Warmup failed"
+          exit 1
+
