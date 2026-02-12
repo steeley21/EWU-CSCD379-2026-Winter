@@ -23,6 +23,7 @@ export function useHivefallApi() {
 
   const http = axios.create({
     baseURL: config.public.apiBase as string,
+    timeout: 20000, // 20s
   })
 
   async function getLeaderboard(limit = 25): Promise<LeaderboardResponse> {

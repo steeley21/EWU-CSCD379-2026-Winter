@@ -98,6 +98,7 @@
           <div class="text-subtitle-2 mb-2">Submit your score</div>
 
           <v-text-field
+            ref="nameField"
             v-model="nameInput"
             label="Name on leaderboard"
             variant="outlined"
@@ -105,10 +106,41 @@
             maxlength="32"
             counter="32"
             hide-details="auto"
-            :disabled="submitting || submitted"
+            :disabled="submitting || submitted || submitWarming"
           />
 
-          <div v-if="submitError" class="mt-2 hf-muted">
+          <!-- Submit feedback -->
+          <v-alert
+            v-if="submitWarming"
+            type="info"
+            variant="tonal"
+            class="mt-2"
+          >
+            <div class="d-flex flex-column ga-1">
+              <div>Submitting score… leaderboard is waking up.</div>
+              <div class="text-body-2">
+                Retrying in <strong>{{ submitRetryIn }}</strong>s
+                <span v-if="submitRetryAttempt > 0">
+                  (attempt {{ submitRetryAttempt }} of {{ maxSubmitRetries }})
+                </span>.
+              </div>
+
+              <div class="d-flex ga-2 mt-2">
+                <v-btn size="small" variant="outlined" @click="submitScore({ force: true })">
+                  Retry now
+                </v-btn>
+                <v-btn size="small" variant="text" @click="cancelSubmitRetries">
+                  Stop retrying
+                </v-btn>
+              </div>
+            </div>
+          </v-alert>
+
+          <div v-else-if="submitting" class="mt-2 hf-muted">
+            Submitting score…
+          </div>
+
+          <div v-else-if="submitError" class="mt-2 hf-muted">
             {{ submitError }}
           </div>
 
@@ -123,7 +155,7 @@
             variant="tonal"
             :loading="submitting"
             :disabled="submitted || submitting"
-            @click="submitScore"
+            @click="submitScore({ force: true })"
           >
             Submit Score
           </v-btn>
@@ -144,8 +176,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch, nextTick } from 'vue'
 import { useDisplay } from 'vuetify'
+import axios from 'axios'
 
 import GameGrid from '../components/GameGrid.vue'
 import DPad from '../components/DPad.vue'
@@ -297,6 +330,58 @@ const submitting = ref(false)
 const submitted = ref(false)
 const submitError = ref<string | null>(null)
 
+// Warming / retry state
+const submitWarming = ref(false)
+const submitRetryAttempt = ref(0)
+const submitRetryIn = ref(0)
+const maxSubmitRetries = 6
+
+let submitRetryTimeout: ReturnType<typeof setTimeout> | null = null
+let submitCountdownInterval: ReturnType<typeof setInterval> | null = null
+
+const submitBackoffSeconds = [2, 3, 5, 8, 13, 13]
+
+function clearSubmitTimers() {
+  if (submitRetryTimeout) {
+    clearTimeout(submitRetryTimeout)
+    submitRetryTimeout = null
+  }
+  if (submitCountdownInterval) {
+    clearInterval(submitCountdownInterval)
+    submitCountdownInterval = null
+  }
+}
+
+function cancelSubmitRetries() {
+  clearSubmitTimers()
+  submitWarming.value = false
+  submitRetryAttempt.value = 0
+  submitRetryIn.value = 0
+}
+
+function startSubmitCountdown(seconds: number) {
+  submitRetryIn.value = seconds
+  submitCountdownInterval = setInterval(() => {
+    submitRetryIn.value = Math.max(0, submitRetryIn.value - 1)
+    if (submitRetryIn.value === 0 && submitCountdownInterval) {
+      clearInterval(submitCountdownInterval)
+      submitCountdownInterval = null
+    }
+  }, 1000)
+}
+
+function getHttpStatus(e: unknown): number | null {
+  if (!axios.isAxiosError(e)) return null
+  return e.response?.status ?? null
+}
+
+function getApiMessage(e: unknown): string | null {
+  if (!axios.isAxiosError(e)) return null
+  const data = e.response?.data as any
+  const msg = data?.message
+  return typeof msg === 'string' ? msg : null
+}
+
 watch(
   status,
   (s) => {
@@ -304,6 +389,7 @@ watch(
       submitting.value = false
       submitted.value = false
       submitError.value = null
+      cancelSubmitRetries()
       return
     }
 
@@ -313,11 +399,18 @@ watch(
   { flush: 'post' }
 )
 
-async function submitScore(): Promise<void> {
-  if (submitting.value || submitted.value) return
+async function submitScore(opts: { force?: boolean } = {}): Promise<void> {
+  if (submitted.value) return
+
+  // force = user clicked "Retry now" / Submit again
+  if (opts.force) cancelSubmitRetries()
+
+  // If we are in a warming retry loop, don't allow parallel submits
+  if (submitting.value) return
 
   submitting.value = true
   submitError.value = null
+  submitWarming.value = false
 
   const trimmed = (nameInput.value || '').trim().slice(0, 32)
   const finalName = trimmed.length ? trimmed : 'Player'
@@ -334,14 +427,96 @@ async function submitScore(): Promise<void> {
       infectedCount: infectedCount.value,
     })
     submitted.value = true
+    submitWarming.value = false
+    cancelSubmitRetries()
   } catch (e) {
-    console.error('Failed to submit run:', e)
-    submitError.value = 'Failed to submit score. You can try again, or just play again.'
+    const statusCode = getHttpStatus(e)
+
+    // 503 = API says "waking up"
+    if (statusCode === 503 && submitRetryAttempt.value < maxSubmitRetries) {
+      submitting.value = false
+      submitted.value = false
+      submitWarming.value = true
+      submitError.value = null
+
+      submitRetryAttempt.value += 1
+      const wait = submitBackoffSeconds[Math.min(submitRetryAttempt.value - 1, submitBackoffSeconds.length - 1)]
+
+      clearSubmitTimers()
+      startSubmitCountdown(wait)
+
+      submitRetryTimeout = setTimeout(() => {
+        submitScore()
+      }, wait * 1000)
+
+      return
+    }
+
+    // Other errors or out of retries
+    const apiMsg = getApiMessage(e)
+    submitting.value = false
     submitted.value = false
+    submitWarming.value = false
+
+    if (statusCode === 503) {
+      submitError.value = apiMsg ?? 'Leaderboard is still waking up. Please try again in a moment.'
+    } else {
+      submitError.value = apiMsg ?? 'Failed to submit score. You can try again, or just play again.'
+    }
   } finally {
+    // If we scheduled a retry, we already returned above
+    // so this only runs for success/final-failure paths
     submitting.value = false
   }
 }
+
+// Auto-focus + optional auto-submit on Game Over dialog open
+type Focusable = { focus: () => void }
+const nameField = ref<Focusable | null>(null)
+
+let autoSubmitTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  gameOver,
+  async (open) => {
+    if (!open) {
+      if (autoSubmitTimer) {
+        clearTimeout(autoSubmitTimer)
+        autoSubmitTimer = null
+      }
+      return
+    }
+
+    await nextTick()
+    nameField.value?.focus?.()
+
+    const cookieName = (playerNameCookie.value ?? '').trim()
+    const inputName = (nameInput.value ?? '').trim()
+
+    if (!cookieName) return
+    if (submitted.value || submitting.value || submitWarming.value) return
+    if (inputName !== cookieName) return
+
+    autoSubmitTimer = setTimeout(() => {
+      if (!gameOver.value) return
+
+      const stillCookie = (playerNameCookie.value ?? '').trim()
+      const stillInput = (nameInput.value ?? '').trim()
+
+      if (!stillCookie) return
+      if (stillInput !== stillCookie) return
+      if (submitted.value || submitting.value || submitWarming.value) return
+
+      void submitScore({ force: true })
+    }, 500)
+  },
+  { flush: 'post' }
+)
+
+onBeforeUnmount(() => {
+  clearSubmitTimers()
+  if (autoSubmitTimer) clearTimeout(autoSubmitTimer)
+})
 </script>
 
 <style scoped>

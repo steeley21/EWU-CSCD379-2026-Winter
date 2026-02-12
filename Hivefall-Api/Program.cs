@@ -34,21 +34,55 @@ else
 {
     var conn = builder.Configuration.GetConnectionString("DefaultConnection")
                ?? throw new InvalidOperationException("Missing connection string 'DefaultConnection'");
-
-    builder.Services.AddDbContext<HivefallDbContext>(opt => opt.UseSqlServer(conn));
+    
+    builder.Services.AddDbContext<HivefallDbContext>(opt =>
+        opt.UseSqlServer(conn, sql =>
+        {
+            sql.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null
+            );
+            sql.CommandTimeout(60);
+        })
+    );
 }
 
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 
 WebApplication app = builder.Build();
 
-//  Works for both relational + InMemory
+// Attempt DB init with retries to handle cold SQL instances; log failures but keep API running for non-DB endpoints.
 using (var scope = app.Services.CreateScope())
 {
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     var db = scope.ServiceProvider.GetRequiredService<HivefallDbContext>();
-    if (db.Database.IsRelational()) db.Database.Migrate();
-    else db.Database.EnsureCreated();
+
+    var initialized = false;
+
+    for (var attempt = 1; attempt <= 5; attempt++)
+    {
+        try
+        {
+            if (db.Database.IsRelational()) await db.Database.MigrateAsync();
+            else await db.Database.EnsureCreatedAsync();
+
+            initialized = true;
+            break;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "DB init attempt {Attempt} failed.", attempt);
+            await Task.Delay(TimeSpan.FromSeconds(attempt * 2));
+        }
+    }
+
+    if (!initialized)
+    {
+        logger.LogError("DB init failed after retries; API will start but DB-backed endpoints may return 503 until SQL is awake.");
+    }
 }
+
 
 if (app.Environment.IsDevelopment())
 {
@@ -61,7 +95,11 @@ app.UseRouting();
 app.UseCors(ClientCors);
 app.UseAuthorization();
 app.MapControllers();
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/health", async (HivefallDbContext db) =>
+{
+    await db.Database.ExecuteSqlRawAsync("SELECT 1");
+    return Results.Ok(new { status = "ok" });
+});
 
 app.Run();
 
