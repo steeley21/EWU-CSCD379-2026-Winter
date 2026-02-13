@@ -88,7 +88,8 @@ const averageRating = ref(0)
 const avgDisplay = computed(() => (averageRating.value > 0 ? averageRating.value : 0))
 
 function formatUtc(iso: string): string {
-  const d = new Date(iso)
+  const s = /Z$|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}Z`
+  const d = new Date(s)
   if (Number.isNaN(d.getTime())) return iso
   return d.toLocaleString()
 }
