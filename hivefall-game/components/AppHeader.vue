@@ -76,6 +76,7 @@ const navItems: NavItem[] = [
   { title: 'Home', to: '/' },
   { title: 'Hivefall', to: '/hivefall' },
   { title: 'Leaderboard', to: '/leaderboard' },
+  { title: 'Reviews', to: '/reviews' },
 ]
 
 function isActive(to: string): boolean {

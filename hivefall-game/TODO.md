@@ -34,9 +34,10 @@
   - [x] Enemy outlined contrasting color (secondary)
   - [x] Resource outlined info/cyan
 
-### 🟧 Leaderboard page
+### ✅ Leaderboard page
 - [x] Route + page exists
-- [ ] Replace placeholder with real data (from API in Phase 2)
+- [x] Real data (from API, Phase 2)
+- [x] Clear “waking up” messaging (503) + retry polish
 
 ### ✅ Controls
 - [x] Keyboard movement (Arrow keys + WASD)
@@ -115,7 +116,7 @@
 - [ ] Expand end summary (moves + infected shown now; time optional)
 
 ### X App polish
-- [ ] Custom favicon
+- [X ] Custom favicon
 - [ ] Optional: subtle background treatment (scanlines/noise), if it fits the terminal vibe
 - [ ] Optional: small feedback animations (move/fight), accessibility pass
 
@@ -140,42 +141,49 @@
 ---
 
 ## ✅ DevOps — Client
-
-### ✅ Azure Static Web App (client)
 - [x] Azure Static Web App deployed
 - [x] GitHub Actions workflow for client deployment
 
 ### X DevOps improvements (optional)
 - [ ] PR checks that run `npm run test:ci`
-- [ ] Environment variables / config notes in README (Phase 2)
 
 ---
 
-## X Phase 2 — API + Database (assignment requirements)
+## ✅ Phase 2 — API + Database (assignment requirements)
 
-### X Backend scaffold (ASP.NET 8)
-- [ ] Create ASP.NET 8 Web API project
-- [ ] Add Entity Framework Core
-- [ ] (If required) ASP.NET Core Identity setup
+### ✅ Backend scaffold (ASP.NET Core)
+- [x] Create Web API project (**targets net10.0**)
+- [x] Add Entity Framework Core
+- [x] ASP.NET Core Identity setup (completed)
 
-### X Database (Azure SQL)
-- [ ] Provision Azure SQL
-- [ ] Configure connection strings / secrets
+### ✅ Database (Azure SQL)
+- [x] Provision Azure SQL
+- [x] Configure connection strings / secrets
+- [x] Migrations applied on startup
+- [x] Added resiliency for cold SQL instances (retry on startup + SQL retry strategy)
 
-### X Endpoints (minimum)
-- [ ] `GET /api/...` returns an object from DB
-- [ ] `POST /api/...` stores an object with EF and returns an object
-- [ ] CORS enabled for client
-- [ ] All endpoints async
+### ✅ Endpoints (minimum)
+- [x] `GET /api/Leaderboard` returns an object from DB
+- [x] `POST /api/Leaderboard` stores an object with EF and returns an object
+- [x] CORS enabled for client
+- [x] All endpoints async
+- [x] Health endpoint available (`GET /health`)
+- [x] 503 “waking up” behavior for leaderboard when SQL is paused
 
-### X Client integration
-- [ ] Axios calls from Nuxt client to API
-- [ ] Use API data for “Leaderboard” and/or “Run history”
+### ✅ Client integration
+- [x] Axios calls from Nuxt client to API
+- [x] Leaderboard page uses API data
+- [x] Game Over “Submit Score” posts to API + shows retry/warming UI
 
-### X Deployment — API
-- [ ] Deploy API to Azure App Service
-- [ ] GitHub Actions workflow for API deployment
+### ✅ Deployment — API
+- [x] Deploy API to Azure App Service
+- [x] GitHub Actions workflow for API deployment
 
-### X Testing — API
-- [ ] Unit tests for service layer
-- [ ] Integration tests for controllers
+### ✅ Testing — API
+- [x] `LeaderboardService` test(s)
+- [x] `LeaderboardController` test(s)
+
+---
+
+## Notes / Nice-to-haves (optional)
+- [ ] Post-deploy warmup step in API GitHub Action (hits `/health` once) to reduce “first user pays cold-start”

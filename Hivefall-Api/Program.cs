@@ -49,6 +49,8 @@ else
 }
 
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
+
 
 WebApplication app = builder.Build();
 

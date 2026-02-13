@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// Models/RunResultEntity.cs
+using System.ComponentModel.DataAnnotations;
 
 namespace Hivefall_Api.Models;
 

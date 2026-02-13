@@ -1,4 +1,3 @@
-// composables/useHivefallApi.ts
 import axios from 'axios'
 
 export type CreateRunResultDto = {
@@ -18,12 +17,34 @@ export type LeaderboardResponse = {
   serverTimeUtc: string
 }
 
+/* ---- Reviews ---- */
+export type CreateReviewDto = {
+  name?: string | null
+  rating: 5
+  comment?: string | null
+}
+
+export type ReviewDto = {
+  id: number
+  name: string
+  rating: number
+  comment: string | null
+  createdAtUtc: string
+}
+
+export type ReviewsResponse = {
+  reviews: ReviewDto[]
+  totalCount: number
+  averageRating: number
+  serverTimeUtc: string
+}
+
 export function useHivefallApi() {
   const config = useRuntimeConfig()
 
   const http = axios.create({
     baseURL: config.public.apiBase as string,
-    timeout: 20000, // 20s
+    timeout: 20000,
   })
 
   async function getLeaderboard(limit = 25): Promise<LeaderboardResponse> {
@@ -36,5 +57,15 @@ export function useHivefallApi() {
     return res.data
   }
 
-  return { getLeaderboard, submitRun }
+  async function getReviews(limit = 5): Promise<ReviewsResponse> {
+    const res = await http.get('/api/Reviews', { params: { limit } })
+    return res.data
+  }
+
+  async function submitReview(dto: CreateReviewDto): Promise<ReviewDto> {
+    const res = await http.post('/api/Reviews', dto)
+    return res.data
+  }
+
+  return { getLeaderboard, submitRun, getReviews, submitReview }
 }

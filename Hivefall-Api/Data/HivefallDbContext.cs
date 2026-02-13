@@ -8,4 +8,5 @@ public class HivefallDbContext : DbContext
     public HivefallDbContext(DbContextOptions<HivefallDbContext> options) : base(options) { }
 
     public DbSet<RunResultEntity> RunResults => Set<RunResultEntity>();
+    public DbSet<ReviewEntity> Reviews => Set<ReviewEntity>();
 }

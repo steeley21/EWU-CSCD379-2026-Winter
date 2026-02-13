@@ -1,4 +1,5 @@
-﻿using Hivefall_Api.Dto;
+﻿// Contollers/LeaderboardController.cs
+using Hivefall_Api.Dto;
 using Hivefall_Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;

@@ -1,9 +1,10 @@
 # Hivefall (Assignment 3)
 
 A small **ASCII-grid** turn-based game where you play as **Smiley (☻)** on a **24×14** board.  
-Each successful move advances the world: **enemies spawn from the edge and chase you**. When you collide with an enemy, a **fight dialog** appears where you can **Engage** and fight (with weapons + cooldowns), or **Run**.
+Each successful move advances the world: **enemies spawn from the edge and chase you**. When you collide with an enemy, a **fight dialog** appears where you can **Engage** and fight (weapons + cooldowns), or **Run**.
 
-Deployment: https://blue-cliff-07b9aa10f.4.azurestaticapps.net/
+Client deployment: https://blue-cliff-07b9aa10f.4.azurestaticapps.net/  
+API deployment: https://a3-hivefall-api.azurewebsites.net/
 
 ---
 
@@ -12,7 +13,6 @@ Deployment: https://blue-cliff-07b9aa10f.4.azurestaticapps.net/
 The app uses a **terminal-ish**, **dark / black / grey** look with a **neon green** accent and **glassy panels**:
 
 - Global reusable glass/utility classes live in: `assets/hf-theme.css`
-  - Used across cards/panels/dialogs/header/grid/dpad
 - Theme cookie + logic exists (`composables/useAppTheme.ts`) for potential reuse later
 - Header title is **“Hivefall”** (white/on-surface)
 
@@ -34,7 +34,7 @@ The app uses a **terminal-ish**, **dark / black / grey** look with a **neon gree
   - Desktop: Arrow keys + WASD
   - Any device: on-screen **D-pad**
 - **Reset** and **Give Up** buttons appear in the header **only on `/hivefall`**
-- Game ends show a **Game Over / You Win** dialog (run summary)
+- Game end shows a **Game Over / You Win** dialog (run summary + submit score)
 
 ### Enemies (E)
 - Enemies spawn on the **edge** of the map after a number of successful player moves
@@ -77,7 +77,7 @@ The app uses a **terminal-ish**, **dark / black / grey** look with a **neon gree
 - When an enemy is defeated and you choose **Harvest/Acquire**, the game rolls a **victory weapon drop**:
   - chance-based (rules), weighted by weapon definitions
   - consumables grant **+1 charge** (even if already owned)
-- The Won screen shows drop labels (or a “no drops” message).
+- The Won screen shows drop labels (or a “no additional items gained” message).
 - Inventory tracks:
   - **Owned weapons** (list of weapon ids)
   - **Charges** for consumable weapons (grenade-style)
@@ -93,10 +93,32 @@ The app uses a **terminal-ish**, **dark / black / grey** look with a **neon gree
   - “Food +10” heals the player by +10 HP (consumes 1 food)
 
 ### Inventory UI + debug tooling
-- Inventory is accessible via an **Inventory button** near the D-pad:
+- Inventory is accessible via an **Inventory** button near the D-pad:
   - Desktop / wide: above the D-pad, **to the right of the GameGrid**
   - Mobile / stacked: **below the GameGrid** but **above the D-pad**
 - Includes a **debug “add weapon”** control to grant weapons one-at-a-time for testing
+
+---
+
+## Leaderboard (API + Azure SQL)
+
+The leaderboard is stored in **Azure SQL** and served by the **Hivefall API**.
+
+API base URL:
+- https://a3-hivefall-api.azurewebsites.net/
+
+### Endpoints
+- `GET /api/Leaderboard?limit=25` → `{ entries, serverTimeUtc }`
+- `POST /api/Leaderboard` → stores a run and returns the created run
+- `GET /health` → executes `SELECT 1` to confirm DB connectivity
+
+### “Waking up” / cold-start behavior
+Azure SQL is configured as **Serverless**, so it can pause when inactive. When it wakes, the first request(s) can fail briefly.
+
+To make this user-friendly:
+- The API returns **503** with a friendly message when SQL is still waking up.
+- The client shows clear “waking up” messaging and retries with a short backoff.
+- The Submit Score UI also supports retry now / stop retrying.
 
 ---
 
@@ -107,8 +129,8 @@ The app uses a **terminal-ish**, **dark / black / grey** look with a **neon gree
 - `E` enemy
 - `☺` infected ally
 
-Reserved for later (partially scaffolded):
-- blocked terrain (`#`, `^`) and movement restrictions (terrain helpers exist; map is still `.` everywhere)
+Reserved for later:
+- blocked terrain (`#`, `^`) and movement restrictions (map is still `.` everywhere)
 
 ---
 
@@ -128,7 +150,8 @@ Reserved for later (partially scaffolded):
 
 ### UI layer
 - `assets/hf-theme.css` – global terminal/glass utilities (reusable classes)
-- `pages/hivefall.vue` – layout + wiring to the engine + dialogs
+- `pages/hivefall.vue` – layout + wiring to the engine + dialogs + submit score flow
+- `pages/leaderboard.vue` – leaderboard UI (API-backed)
 - `components/GameGrid.vue` – renderer for a `GameCell[][]`
 - `components/DPad.vue` – input component (calls callbacks)
 - `components/FightDialog.vue` – fight modal + HUD + weapon buttons + won-choice UI
@@ -156,60 +179,39 @@ Core logic lives in `/game` as **pure TypeScript** for unit testing:
 Vue wrapper:
 - `composables/useHivefallEngine.ts` – wraps the pure engine in Vue reactivity + runs the combat tick timer
 
+### API layer (ASP.NET Core + EF + Identity)
+- API: `Hivefall-Api/`
+- Uses Entity Framework Core + migrations
+- Uses ASP.NET Core Identity (assignment requirement)
+- Tests: `Hivefall-Api.Tests/` (includes `LeaderboardService` + `LeaderboardController` tests)
+
 ---
 
-## Repo structure (current)
+## Repo structure (high-level)
 
 ```text
-hivefall-game/
-  api/                # reserved for Phase 2 backend work (ASP.NET) / API assets
+hivefall-game/                 # Nuxt/Vue client
   assets/
-    hf-theme.css
   components/
-    AppHeader.vue
-    DPad.vue
-    FightDialog.vue
-    GameGrid.vue
-    InventoryDialog.vue
   composables/
-    useAppTheme.ts
-    useHivefallEngine.ts
-    useHivefallHeaderActions.ts
-    usePlayerControls.ts
   game/
-    collision.ts
-    combat.ts
-    enemyAi.ts
-    infectedAi.ts
-    engine.ts
-    hivefallRules.ts
-    hivefallTypes.ts
-    movement.ts
-    pacing.ts
-    spawn.ts
-  layouts/
   pages/
-    hivefall.vue
-    index.vue
-    leaderboard.vue
-  plugins/
-    vuetify.ts
   tests/
-    collision.test.ts
-    drop.test.ts
-    endStates.test.ts
-    enemyAI.test.ts
-    engine.test.ts
-    fightPhases.test.ts
-    fightResolution.test.ts
-    infected.test.ts
-    inventory.test.ts
-    movement.test.ts
-    pacing.test.ts
-    spawn.test.ts
-  types/
   README.md
   TODO.md
+
+Hivefall-Api/                  # ASP.NET Core Web API
+  Controllers/
+  Data/
+  Dto/
+  Migrations/
+  Models/
+  Services/
+  Program.cs
+  appsettings*.json
+
+Hivefall-Api.Tests/            # API tests
+  ...
 ```
 
 ---
@@ -218,37 +220,46 @@ hivefall-game/
 
 ### Prereqs
 - Node + npm
+- .NET SDK (project targets **net10.0**;)
 
-### Install + run
+### Client
 ```bash
+cd hivefall-game
 npm install
 npm run dev
 ```
 
+### API
+```bash
+cd Hivefall-Api
+dotnet restore
+dotnet run
+```
+
 ---
 
-## Testing (Vitest)
+## Environment variables
 
-Run unit tests:
+Client build reads:
+- `NUXT_PUBLIC_API_BASE` (the API base URL used by Axios)
+
+Example:
 ```bash
+NUXT_PUBLIC_API_BASE="https://a3-hivefall-api.azurewebsites.net"
+```
+
+---
+
+## Testing
+
+Client (Vitest):
+```bash
+cd hivefall-game
 npm run test:ci
 ```
 
-Current test coverage includes:
-- Enemy chase step behavior (`game/enemyAi.ts`)
-- Infected chase + contact damage (`game/infectedAi.ts`, `tests/infected.test.ts`)
-- Edge spawning + blocked retries (`game/spawn.ts`)
-- Pacing + acceleration rules (`game/pacing.ts`)
-- Movement helpers (`game/movement.ts`)
-- Collision helpers (`game/collision.ts`)
-- Engine step behavior + fight phases + weapon combat + end states (`game/engine.ts`)
-- Victory outcome + drop logic (`tests/drop.test.ts`)
-- Inventory / weapon granting (`tests/inventory.test.ts`)
-
----
-
-## What’s next (near-term roadmap)
-
-- Terrain generation (blocked tiles) + movement restrictions
-- Improve “Run” behavior (real reposition / escape)
-- Replace placeholder Leaderboard with API-backed data (Phase 2)
+API:
+```bash
+cd Hivefall-Api
+dotnet test
+```

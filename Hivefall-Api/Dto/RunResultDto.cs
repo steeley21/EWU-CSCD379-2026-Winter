@@ -1,4 +1,5 @@
-﻿namespace Hivefall_Api.Dto;
+﻿// /Dto/RunResultDto.cs
+namespace Hivefall_Api.Dto;
 
 public record RunResultDto(
     int Id,

@@ -1,4 +1,5 @@
-﻿namespace Hivefall_Api.Dto;
+﻿// Dto/CreateRunResultDto.cs
+namespace Hivefall_Api.Dto;
 
 public record CreateRunResultDto(
     string PlayerName,
