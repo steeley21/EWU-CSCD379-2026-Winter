@@ -93,28 +93,33 @@ export const defaultHivefallRules: HivefallRules = {
   cols: 24,
   terrain: '.',
 
-  maxEnemies: 10,
+  // Increased difficulty: more total enemies in a run
+  maxEnemies: 50,
+
   firstSpawnAfterMoves: 5,
 
+  // Slower pacing:
+  // - Never faster than 1 spawn every 3 moves
+  // - Only accelerates every 4 spawns
   spawnPacing: {
-    minInterval: 2,
-    decreaseEverySpawns: 2,
+    minInterval: 3,
+    decreaseEverySpawns: 4,
     step: 1,
   },
 
   playerMaxHp: 20,
 
   combat: {
-    enemyMaxHp: 5,
+    enemyMaxHp: 10,
 
     // legacy (Hit weapon matches these defaults)
     playerHitDamage: 1,
     playerHitCooldownMs: 800,
 
     enemyHitDamage: 2,
-    enemyHitIntervalMs: 1500,
+    enemyHitIntervalMs: 1800,
 
-    infectedHitDamage: 1,
+    infectedHitDamage: 5,
   },
 
   weapons: {
