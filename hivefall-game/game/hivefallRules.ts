@@ -94,7 +94,7 @@ export const defaultHivefallRules: HivefallRules = {
   terrain: '.',
 
   // Increased difficulty: more total enemies in a run
-  maxEnemies: 50,
+  maxEnemies: 25,
 
   firstSpawnAfterMoves: 5,
 

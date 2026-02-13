@@ -31,7 +31,7 @@ Terminal-ish dark theme (black/grey) with neon green accent + glass panels.
 
 ### Enemies, fights, and infecteds
 - **Difficulty tuning (current):**
-  - **Max enemies per run:** `maxEnemies = 50`
+  - **Max enemies per run:** `maxEnemies = 25`
   - **Spawn pacing:** never faster than **1 spawn every 3 moves**, and only accelerates every **4 spawns**
   - **Enemy durability:** `enemyMaxHp = 10`
   - **Enemy attack rate:** hits every **1.8s** in combat
