@@ -81,15 +81,10 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// ── Seed Roles ────────────────────────────────────────────────────────────────
+// ── Seed Data ─────────────────────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    foreach (var role in new[] { "Admin", "GroupAdmin", "Member" })
-    {
-        if (!await roleManager.RoleExistsAsync(role))
-            await roleManager.CreateAsync(new IdentityRole(role));
-    }
+    await DataSeeder.SeedAsync(scope.ServiceProvider);
 }
 
 // ── Middleware Pipeline ───────────────────────────────────────────────────────
