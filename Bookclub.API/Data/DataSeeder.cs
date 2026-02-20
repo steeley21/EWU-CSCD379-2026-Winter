@@ -45,6 +45,26 @@ public static class DataSeeder
         var carol = await CreateUser("Carol", "White", "carol@example.com", "carolw", "Password1!", "Member");
         var dave = await CreateUser("Dave", "Brown", "dave@example.com", "daveb", "Password1!", "Member");
 
+        // ── Developer Admin Accounts ───────────────────────────────────────────────
+        var dev = await CreateUser("Colton", "Knopik", "coltonknopik@gmail.com", "colton", "S3cure456", "Admin");
+        dev ??= await userManager.FindByEmailAsync("coltonknopik@gmail.com");
+
+        var dev2 = await CreateUser("Kate", "Steele", "kate@gmail.com", "kate", "S3cure789", "Admin");
+        dev2 ??= await userManager.FindByEmailAsync("katesteele@gmail.com");
+
+        // Ensure existing accounts has Admin role
+        if (dev != null && !await userManager.IsInRoleAsync(dev, "Admin"))
+        {
+            await userManager.RemoveFromRoleAsync(dev, "Member");
+            await userManager.AddToRoleAsync(dev, "Admin");
+        }
+
+        if (dev2 != null && !await userManager.IsInRoleAsync(dev2, "Admin"))
+        {
+            await userManager.RemoveFromRoleAsync(dev2, "Member");
+            await userManager.AddToRoleAsync(dev2, "Admin");
+        }
+
         // Fetch existing users if they were already seeded
         alice ??= await userManager.FindByEmailAsync("alice@example.com");
         bob ??= await userManager.FindByEmailAsync("bob@example.com");
