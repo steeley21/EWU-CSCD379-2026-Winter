@@ -30,6 +30,12 @@ export type BookDto = {
   [k: string]: unknown
 }
 
+// --- Groups ---
+
+export type CreateGroupRequestDto = {
+  groupName: string
+}
+
 export type GroupSummaryDto = {
   groupId: number
   groupName: string
@@ -39,6 +45,32 @@ export type GroupSummaryDto = {
   [k: string]: unknown
 }
 
-export type CreateGroupRequestDto = {
-  groupName: string
+export type GroupMemberDto = {
+  userId: string
+  fullName: string
+  email?: string
+  username?: string
+  [k: string]: unknown
+}
+
+export type GroupScheduleDto = {
+  gsId: number
+  groupId: number
+  book: BookDto
+  dateTime: string // ISO
+  duration: number
+  location?: string | null
+}
+
+export type CreateGroupScheduleRequestDto = {
+  bId: number
+  dateTime: string // ISO
+  duration: number
+  location?: string | null
+}
+
+export type GroupBookDto = {
+  gbId: number
+  groupId: number
+  book: BookDto
 }
