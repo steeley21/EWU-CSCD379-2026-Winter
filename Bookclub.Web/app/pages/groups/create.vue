@@ -127,47 +127,46 @@
 
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/authStore'
+import { groupsService } from '~/services/groupsService'
 
 definePageMeta({ middleware: 'auth' })
 
-/* ── Auth: hydrate inside onMounted to ensure localStorage is available ── */
 const auth = useAuthStore()
 
 onMounted(() => {
   auth.hydrate()
 })
 
-/* ── State ── */
 const locationMode = ref<'online' | 'inperson'>('online')
 
 const form = reactive({
-  name:  '',
-  city:  '',
+  name: '',
+  city: '',
   state: '',
 })
 
 const errors = reactive({
-  name:     '',
+  name: '',
   location: '',
 })
 
 const submitting = ref(false)
-const apiError   = ref('')
+const apiError = ref('')
 
-/* ── Helpers ── */
 function setLocationMode(mode: 'online' | 'inperson') {
   locationMode.value = mode
   errors.location = ''
   if (mode === 'online') {
-    form.city  = ''
+    form.city = ''
     form.state = ''
   }
 }
 
 function validateName() {
-  errors.name = form.name.trim().length < 2
-    ? 'Please enter a group name (at least 2 characters).'
-    : ''
+  errors.name =
+    form.name.trim().length < 2
+      ? 'Please enter a group name (at least 2 characters).'
+      : ''
 }
 
 function validateLocation() {
@@ -184,38 +183,26 @@ function isValid() {
   return !errors.name && !errors.location
 }
 
-/* ── Submit ── */
 async function handleSubmit() {
   if (!isValid()) return
 
-  // Read token at submit time — guaranteed to be after onMounted hydration
-  const token = localStorage.getItem('bookclub.token')
-
-  if (!token) {
+  // middleware should prevent this, but it gives a nicer error if state is weird
+  if (!auth.isAuthenticated) {
     apiError.value = 'You are not logged in. Please log in and try again.'
     return
   }
 
   submitting.value = true
-  apiError.value   = ''
+  apiError.value = ''
 
   try {
-    await $fetch('http://localhost:5000/api/Groups', {
-      method: 'POST',
-      body: { groupName: form.name.trim() },
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    })
-
-    navigateTo('/dashboard')
-  } catch (err: unknown) {
-    const e = err as { data?: { message?: string; title?: string }; message?: string }
+    await groupsService.create({ groupName: form.name.trim() })
+    await navigateTo('/dashboard?created=1')
+  } catch (err: any) {
     apiError.value =
-      e?.data?.message ??
-      e?.data?.title   ??
-      e?.message       ??
+      err?.response?.data?.message ??
+      err?.response?.data?.title ??
+      err?.message ??
       'Something went wrong. Please try again.'
   } finally {
     submitting.value = false

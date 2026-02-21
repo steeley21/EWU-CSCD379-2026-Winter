@@ -1,0 +1,23 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/staticwebapp.config.json",
+      "/favicon.ico",
+      "/robots.txt",
+      "/_nuxt/*",
+      "/assets/*",
+      "/*.css",
+      "/*.js",
+      "/*.map",
+      "/*.json",
+      "/*.png",
+      "/*.jpg",
+      "/*.jpeg",
+      "/*.svg",
+      "/*.ico",
+      "/*.woff",
+      "/*.woff2"
+    ]
+  }
+}

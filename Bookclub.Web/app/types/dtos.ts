@@ -30,9 +30,15 @@ export type BookDto = {
   [k: string]: unknown
 }
 
-export type GroupDto = {
-  id: number
-  name?: string
-  adminUserId?: string
+export type GroupSummaryDto = {
+  groupId: number
+  groupName: string
+  adminId: string
+  adminFullName?: string
+  memberCount?: number
   [k: string]: unknown
+}
+
+export type CreateGroupRequestDto = {
+  groupName: string
 }
