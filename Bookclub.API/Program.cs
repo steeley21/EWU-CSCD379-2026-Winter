@@ -91,10 +91,10 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // ── Seed Data ─────────────────────────────────────────────────────────────────
-using (var scope = app.Services.CreateScope())
-{
-    await DataSeeder.SeedAsync(scope.ServiceProvider);
-}
+//using (var scope = app.Services.CreateScope())
+//{
+//    await DataSeeder.SeedAsync(scope.ServiceProvider);
+//}
 
 // ── Middleware Pipeline ───────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
