@@ -107,15 +107,16 @@
 
       <!-- Fetch error -->
       <div v-else-if="fetchError" class="groups-fetch-error">{{ fetchError }}</div>
-
-      <div v-else class="groups-grid">
+      <!-- Normal content -->
+      <div v-else></div>
+        <div class="groups-grid">
         <!-- Populated state -->
         <template v-if="groups.length">
           <div
             v-for="group in groups"
-            :key="group.groupID"
+            :key="group.groupId"
             class="group-card"
-            @click="navigateTo(`/groups/${group.groupID}`)"
+            @click="navigateTo(`/groups/${group.groupId}`)"
           >
             <div class="group-card-banner" />
             <div class="group-card-body">
@@ -136,6 +137,7 @@
               </div>
             </div>
           </div>
+          
         </template>
 
         <!-- Empty state -->
@@ -164,52 +166,52 @@
 
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/authStore'
+import { groupsService } from '~/services/groupsService'
+import type { GroupSummaryDto } from '~/types/dtos'
 
 definePageMeta({ middleware: 'auth' })
 
 const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 
-// ── Types ──────────────────────────────────────────────────────
-interface GroupDto {
-  groupID: number
-  groupName: string
-  adminID: string
-  adminFullName: string
-  memberCount: number
-}
-
-// ── State ──────────────────────────────────────────────────────
-const groups = ref<GroupDto[]>([])
+const groups = ref<GroupSummaryDto[]>([])
 const loading = ref(true)
 const fetchError = ref('')
 
-// ── Fetch user's groups on mount ──────────────────────────────
-onMounted(async () => {
-  auth.hydrate()
+// show once, then clear URL param
+const showCreatedBanner = ref(false)
 
-  const token = localStorage.getItem('bookclub.token')
-  if (!token) return
-
+async function loadGroups() {
+  fetchError.value = ''
+  loading.value = true
   try {
-    // GET /api/Groups returns all groups; filter to ones the current user is a member of
-    // The API returns adminID and we have auth.userId to match against membership.
-    // Since there's no GET /api/Groups/mine endpoint, we fetch all and filter by
-    // whether the current user is the admin OR a member.
-    // For now we filter by adminID — extend once a /me/groups endpoint exists.
-    const all = await $fetch<GroupDto[]>('http://localhost:5000/api/Groups', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-
-    // Show groups where the current user is admin or a member.
-    // The API returns memberCount but not member IDs, so we filter by adminID for now.
-    // TODO: replace with GET /api/Groups/mine once that endpoint is added.
-    groups.value = all.filter(g => g.adminID === auth.userId)
+    const all = await groupsService.getAll()
+    groups.value = all.filter(g => String(g.adminId) === String(auth.userId))
   } catch (e) {
     fetchError.value = 'Could not load your groups. Please refresh.'
     console.error(e)
   } finally {
     loading.value = false
   }
+}
+
+onMounted(async () => {
+  auth.hydrate()
+
+  if (route.query.created === '1') {
+    showCreatedBanner.value = true
+
+    // remove `created` from URL so refresh doesn't keep the banner
+    const q = { ...route.query } as Record<string, any>
+    delete q.created
+    router.replace({ path: route.path, query: q })
+
+    // optional: auto-hide after a moment
+    window.setTimeout(() => { showCreatedBanner.value = false }, 3000)
+  }
+
+  await loadGroups()
 })
 </script>
 
