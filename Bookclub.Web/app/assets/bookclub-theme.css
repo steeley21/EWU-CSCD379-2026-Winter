@@ -1,0 +1,20 @@
+:root{
+  --ash-grey: #abc4abff;
+  --camel: #a39171ff;
+  --pale-oak: #dcc9b6ff;
+  --dusty-olive: #727d71ff;
+  --coffee-bean: #6d4c3dff;
+}
+
+.bc-page {
+  background: linear-gradient(180deg, var(--pale-oak), #ffffff);
+  min-height: 100vh;
+}
+
+.bc-card {
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+.bc-muted {
+  color: rgba(0,0,0,0.65);
+}
