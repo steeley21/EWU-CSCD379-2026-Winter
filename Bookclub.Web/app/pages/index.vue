@@ -1,12 +1,20 @@
 <template>
   <div class="landing-page">
-    <div class="hero-section">
+
+    <!-- ── Hero ── -->
+    <section class="hero-section">
       <div class="hero-content">
         <div class="eyebrow">Book Club</div>
-        <h1 class="hero-title">What our users<br><em>are reading now</em></h1>
+
+        <h1 class="hero-title">
+          A place to read,
+          <span class="title-accent"><em>share, and belong.</em></span>
+        </h1>
+
         <p class="hero-sub">
-          Explore the newest books added to Book Club. Log in to join groups,
-          build libraries, and schedule meetings.
+          Join a community of readers who love getting lost in a good book.
+          Discover new titles, connect with fellow members, build your personal
+          library, and schedule your next meetup — all in one warm corner of the web.
         </p>
 
         <div class="hero-cta">
@@ -30,34 +38,142 @@
           >
             Go to Dashboard →
           </v-btn>
+
+          <a
+            v-if="!auth.isAuthenticated"
+            href="#featured"
+            class="cta-secondary"
+          >Browse books first</a>
         </div>
       </div>
 
+      <!-- Illustrated book stack panel -->
+      <div class="hero-visual" aria-hidden="true">
+        <div class="book-stack">
+          <div class="book-card-deco b1">
+            <div class="spine" />
+          </div>
+          <div class="book-card-deco b2">
+            <div class="spine" />
+          </div>
+          <div class="book-card-deco b3">
+            <div class="spine" />
+            <div class="cover-title">The Art of<br>Slow Reading</div>
+            <div class="cover-author">Community Picks</div>
+          </div>
+        </div>
+
+        <div class="hero-badge">
+          <strong>1,200+</strong>
+          books in our growing library
+        </div>
+      </div>
+
+      <!-- Background decoration -->
       <div class="hero-decoration" aria-hidden="true">
         <div class="deco-circle deco-1" />
         <div class="deco-circle deco-2" />
         <div class="deco-ring" />
       </div>
+    </section>
+
+    <!-- ── Trust Bar ── -->
+    <div class="trust-bar">
+      <span class="trust-item"><strong>500+</strong>&nbsp;Active Members</span>
+      <div class="trust-divider" />
+      <span class="trust-item"><strong>40+</strong>&nbsp;Reading Groups</span>
+      <div class="trust-divider" />
+      <span class="trust-item"><strong>Monthly</strong>&nbsp;Meetups Scheduled</span>
+      <div class="trust-divider" />
+      <span class="trust-item"><strong>Free</strong>&nbsp;to Join</span>
     </div>
 
-    <div class="books-section">
+    <!-- ── Features ── -->
+    <section class="features-section">
+      <div class="section-header">
+        <span class="section-label">Everything you need</span>
+        <div class="title-line" />
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📚</div>
+          <div class="feature-title">Personal Library</div>
+          <p class="feature-desc">
+            Track every book you've read, want to read, or are currently enjoying.
+            Your shelf, beautifully organised.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">👥</div>
+          <div class="feature-title">Reading Groups</div>
+          <p class="feature-desc">
+            Join existing clubs or create your own. Invite friends, choose a book
+            together, and never read alone again.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🗓️</div>
+          <div class="feature-title">Meeting Scheduler</div>
+          <p class="feature-desc">
+            Coordinate meetups with ease. Set times, share agendas, and keep
+            everyone on the same page — literally.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Quote Banner ── -->
+    <div class="quote-banner">
+      <div class="quote-mark" aria-hidden="true">"</div>
+      <p class="quote-text">
+        A reader lives a thousand lives before he dies. The man who never reads
+        lives only one.
+      </p>
+      <div class="quote-attr">— George R.R. Martin</div>
+    </div>
+
+    <!-- ── Featured Books ── -->
+    <section id="featured" class="books-section">
       <div class="section-header">
         <h2 class="section-title">Featured Books</h2>
         <div class="title-line" />
       </div>
 
-      <v-progress-linear v-if="pending" indeterminate rounded class="mb-6" color="var(--coffee-bean)" />
+      <v-progress-linear
+        v-if="pending"
+        indeterminate
+        rounded
+        class="status-bar"
+        color="var(--camel)"
+      />
 
-      <v-alert v-else-if="error" type="error" variant="tonal" rounded="lg" class="mb-6">
-        Failed to load books. Is the API running on <code>https://localhost:5000</code>?
+      <v-alert
+        v-else-if="error"
+        type="error"
+        variant="tonal"
+        rounded="lg"
+        class="status-bar"
+      >
+        Failed to load books. Is the API running on
+        <code>https://localhost:5000</code>?
       </v-alert>
 
       <v-row v-else>
-        <v-col v-for="b in featured" :key="String(b.id)" cols="12" sm="6" md="4">
+        <v-col
+          v-for="b in featured"
+          :key="String(b.id)"
+          cols="12"
+          sm="6"
+          md="4"
+        >
           <BookCard :book="b" />
         </v-col>
       </v-row>
-    </div>
+    </section>
+
   </div>
 </template>
 
@@ -66,6 +182,11 @@ import { useAuthStore } from '~/stores/authStore'
 import { booksService } from '~/services/booksService'
 import BookCard from '~/components/common/BookCard.vue'
 import type { BookDto } from '~/types/dtos'
+
+// Theme tokens, fonts, and utilities (variables used by assets/index.css)
+import 'assets/bookclub-theme.css'
+// Page-level styles (imports theme internally via @import)
+import '~/assets/index.css'
 
 const auth = useAuthStore()
 auth.hydrate()
@@ -89,144 +210,3 @@ const featured = computed(() => {
   return sorted.slice(0, 6)
 })
 </script>
-
-<style scoped>
-.landing-page {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  padding: 0 clamp(1.5rem, 5vw, 4rem);
-  max-width: 1280px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* ── Hero ── */
-.hero-section {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: 50vh;
-  padding: clamp(3rem, 8vh, 6rem) 0 clamp(2rem, 5vh, 4rem);
-  overflow: hidden;
-}
-
-.hero-content {
-  position: relative;
-  z-index: 1;
-  max-width: 620px;
-}
-
-.eyebrow {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--dusty-olive);
-  margin-bottom: 1rem;
-}
-
-.hero-title {
-  font-size: clamp(2.25rem, 5vw, 3.75rem);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  margin-bottom: 1.25rem;
-  color: var(--coffee-bean);
-}
-
-.hero-title em {
-  font-style: italic;
-  color: var(--camel);
-}
-
-.hero-sub {
-  font-size: 1.0625rem;
-  line-height: 1.65;
-  color: rgba(0, 0, 0, 0.55);
-  max-width: 500px;
-  margin-bottom: 2.25rem;
-}
-
-.cta-btn {
-  font-weight: 700;
-  font-size: 1rem;
-  letter-spacing: 0.01em;
-  padding: 0 2rem !important;
-  height: 52px !important;
-  background-color: var(--coffee-bean) !important;
-  color: #fff !important;
-}
-
-.cta-btn:hover {
-  background-color: var(--camel) !important;
-}
-
-/* Decorative shapes using theme colors */
-.hero-decoration {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.deco-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: var(--ash-grey);
-}
-
-.deco-1 {
-  width: 480px;
-  height: 480px;
-  right: -120px;
-  top: -80px;
-  opacity: 0.18;
-}
-
-.deco-2 {
-  width: 260px;
-  height: 260px;
-  right: 160px;
-  bottom: -40px;
-  opacity: 0.1;
-  background: var(--pale-oak);
-}
-
-.deco-ring {
-  position: absolute;
-  width: 320px;
-  height: 320px;
-  right: 60px;
-  top: 40px;
-  border-radius: 50%;
-  border: 2px solid var(--camel);
-  opacity: 0.2;
-}
-
-/* ── Books ── */
-.books-section {
-  padding-bottom: clamp(3rem, 8vh, 6rem);
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.section-title {
-  font-size: 1.375rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  color: var(--coffee-bean);
-}
-
-.title-line {
-  flex: 1;
-  height: 1px;
-  background: var(--pale-oak);
-}
-</style>

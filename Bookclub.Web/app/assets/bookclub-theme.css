@@ -1,20 +1,254 @@
-:root{
-  --ash-grey: #abc4abff;
-  --camel: #a39171ff;
-  --pale-oak: #dcc9b6ff;
-  --dusty-olive: #727d71ff;
-  --coffee-bean: #6d4c3dff;
+/* ============================================================
+   Book Club — Global Theme
+   bookclub-theme.css
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ── Tokens ── */
+:root {
+    --ash-grey: #abc4abff;
+    --camel: #a39171ff;
+    --pale-oak: #dcc9b6ff;
+    --dusty-olive: #727d71ff;
+    --coffee-bean: #6d4c3dff;
+    /* Derived */
+    --bg: #faf7f4; /* site background, warmer than white */
+    --surface: #ffffff; /* cards, panels */
+    --border: rgba(0, 0, 0, 0.08);
+    --text-base: var(--coffee-bean);
+    --text-muted: rgba(109, 76, 61, 0.55);
+    --text-light: rgba(109, 76, 61, 0.38);
+    /* Typography */
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    /* Spacing scale */
+    --space-xs: 0.5rem;
+    --space-sm: 1rem;
+    --space-md: 1.5rem;
+    --space-lg: 2.5rem;
+    --space-xl: 4rem;
+    /* Radii */
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-pill: 9999px;
+    /* Shadows */
+    --shadow-sm: 0 2px 8px rgba(109, 76, 61, 0.08);
+    --shadow-md: 0 6px 24px rgba(109, 76, 61, 0.12);
+    --shadow-lg: 0 16px 48px rgba(109, 76, 61, 0.16);
+    /* Transitions */
+    --ease: 0.22s ease;
 }
 
+/* ── Base reset ── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-base);
+    line-height: 1.6;
+}
+
+/* ── Layout helpers ── */
 .bc-page {
-  background: linear-gradient(180deg, var(--pale-oak), #ffffff);
-  min-height: 100vh;
+    background: linear-gradient(180deg, var(--pale-oak), var(--bg));
+    min-height: 100vh;
 }
 
+.bc-container {
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 0 clamp(1.5rem, 5vw, 4rem);
+    box-sizing: border-box;
+}
+
+/* ── Surface / Card ── */
 .bc-card {
-  border: 1px solid rgba(0,0,0,0.08);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--ease), transform var(--ease);
+}
+
+    .bc-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-3px);
+    }
+
+/* ── Typography ── */
+.bc-display {
+    font-family: var(--font-display);
+    font-weight: 900;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--text-base);
+}
+
+.bc-heading {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--text-base);
+}
+
+.bc-body {
+    font-family: var(--font-body);
+    font-weight: 400;
+    color: var(--text-base);
 }
 
 .bc-muted {
-  color: rgba(0,0,0,0.65);
+    color: var(--text-muted);
+}
+
+.bc-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--dusty-olive);
+}
+
+/* ── Buttons ── */
+.bc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    letter-spacing: 0.02em;
+    padding: 0 2rem;
+    height: 52px;
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background var(--ease), transform var(--ease), box-shadow var(--ease);
+}
+
+.bc-btn-primary {
+    background: var(--coffee-bean);
+    color: var(--bg);
+    box-shadow: 0 4px 20px rgba(109, 76, 61, 0.2);
+}
+
+    .bc-btn-primary:hover {
+        background: var(--camel);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(163, 145, 113, 0.35);
+    }
+
+.bc-btn-ghost {
+    background: transparent;
+    color: var(--dusty-olive);
+    border: 1.5px solid var(--pale-oak);
+}
+
+    .bc-btn-ghost:hover {
+        border-color: var(--camel);
+        color: var(--camel);
+    }
+
+/* ── Divider ── */
+.bc-divider {
+    height: 1px;
+    background: linear-gradient(to right, var(--pale-oak), transparent);
+    border: none;
+    margin: var(--space-lg) 0;
+}
+
+/* ── Eyebrow / section label with rule ── */
+.bc-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--dusty-olive);
+}
+
+    .bc-eyebrow::before {
+        content: '';
+        display: block;
+        width: 24px;
+        height: 1px;
+        background: var(--camel);
+        flex-shrink: 0;
+    }
+
+/* ── Section header with trailing line ── */
+.bc-section-header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: var(--space-lg);
+}
+
+    .bc-section-header .bc-heading {
+        white-space: nowrap;
+        font-size: 1.75rem;
+    }
+
+    .bc-section-header .bc-line {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(to right, var(--pale-oak), transparent);
+    }
+
+/* ── Icon chip (for feature icons, avatars, etc.) ── */
+.bc-icon-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: var(--radius-sm);
+    background: var(--pale-oak);
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+/* ── Utility ── */
+.bc-italic {
+    font-style: italic;
+}
+
+.bc-text-camel {
+    color: var(--camel);
+}
+
+.bc-text-olive {
+    color: var(--dusty-olive);
+}
+
+.bc-text-coffee {
+    color: var(--coffee-bean);
+}
+
+.bc-bg-pale-oak {
+    background: var(--pale-oak);
+}
+
+.bc-bg-coffee {
+    background: var(--coffee-bean);
 }
