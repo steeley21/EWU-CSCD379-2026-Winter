@@ -13,33 +13,31 @@
           <v-window v-model="tab" class="mt-4">
             <!-- Login -->
             <v-window-item value="login">
-              <v-form @submit.prevent="submitLogin">
-                <v-text-field v-model="login.username" label="Username" autocomplete="username" />
-                <v-text-field v-model="login.password" label="Password" type="password" autocomplete="current-password" />
-                <v-btn :loading="loading" type="submit" color="primary" block class="mt-2">
-                  Login
-                </v-btn>
-              </v-form>
+              <v-text-field v-model="login.email" label="Email" autocomplete="email" />
+              <v-text-field v-model="login.password" label="Password" type="password" autocomplete="current-password"
+                @keyup.enter="submitLogin" />
+              <v-btn :loading="loading" color="primary" block class="mt-2" @click="submitLogin">
+                Login
+              </v-btn>
             </v-window-item>
 
             <!-- Register -->
             <v-window-item value="register">
-              <v-form @submit.prevent="submitRegister">
-                <v-row>
-                  <v-col cols="12" sm="6">
-                    <v-text-field v-model="reg.fname" label="First name" />
-                  </v-col>
-                  <v-col cols="12" sm="6">
-                    <v-text-field v-model="reg.lname" label="Last name" />
-                  </v-col>
-                </v-row>
-                <v-text-field v-model="reg.email" label="Email" type="email" autocomplete="email" />
-                <v-text-field v-model="reg.username" label="Username" autocomplete="username" />
-                <v-text-field v-model="reg.password" label="Password" type="password" autocomplete="new-password" />
-                <v-btn :loading="loading" type="submit" color="primary" block class="mt-2">
-                  Create account
-                </v-btn>
-              </v-form>
+              <v-row>
+                <v-col cols="12" sm="6">
+                  <v-text-field v-model="reg.fname" label="First name" />
+                </v-col>
+                <v-col cols="12" sm="6">
+                  <v-text-field v-model="reg.lname" label="Last name" />
+                </v-col>
+              </v-row>
+              <v-text-field v-model="reg.email" label="Email" type="email" autocomplete="email" />
+              <v-text-field v-model="reg.email" label="Email" autocomplete="email" />
+              <v-text-field v-model="reg.password" label="Password" type="password" autocomplete="new-password"
+                @keyup.enter="submitRegister" />
+              <v-btn :loading="loading" color="primary" block class="mt-2" @click="submitRegister">
+                Create account
+              </v-btn>
             </v-window-item>
           </v-window>
 
@@ -55,7 +53,6 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/authStore'
 
-// Must only run on client — auth state lives in localStorage
 if (import.meta.client) {
   const auth = useAuthStore()
   auth.hydrate()
@@ -68,7 +65,7 @@ const tab = ref<'login' | 'register'>('login')
 const loading = ref(false)
 const errMsg = ref('')
 
-const login = ref({ username: '', password: '' })
+const login = ref({ email: '', password: '' })
 const reg = ref({ fname: '', lname: '', email: '', username: '', password: '' })
 
 async function submitLogin() {

@@ -73,7 +73,8 @@ export const useAuthStore = defineStore('auth', {
       safeClearAuth()
     },
 
-    applyAuth(auth: AuthResponseDto) {
+      applyAuth(auth: AuthResponseDto) {
+      console.log('applyAuth received:', auth)
       this.token = auth.token
       this.userId = auth.userId
       this.email = auth.email

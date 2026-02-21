@@ -16,7 +16,7 @@ export type RegisterRequestDto = {
 }
 
 export type LoginRequestDto = {
-  username: string
+  email: string
   password: string
 }
 

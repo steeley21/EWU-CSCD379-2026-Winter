@@ -2,19 +2,16 @@
   <div class="landing-page">
     <div class="hero-section">
       <div class="hero-content">
-        <div class="hero-text">
-          <div class="eyebrow">Book Club</div>
-          <h1 class="hero-title">What our users<br><em>are reading now</em></h1>
-          <p class="hero-sub">
-            Explore the newest books added to Book Club. Log in to join groups,
-            build libraries, and schedule meetings.
-          </p>
-        </div>
+        <div class="eyebrow">Book Club</div>
+        <h1 class="hero-title">What our users<br><em>are reading now</em></h1>
+        <p class="hero-sub">
+          Explore the newest books added to Book Club. Log in to join groups,
+          build libraries, and schedule meetings.
+        </p>
 
         <div class="hero-cta">
           <v-btn
-            v-if="!isAuthenticated"
-            color="primary"
+            v-if="!auth.isAuthenticated"
             size="large"
             to="/login"
             class="cta-btn"
@@ -25,7 +22,6 @@
           </v-btn>
           <v-btn
             v-else
-            color="primary"
             size="large"
             to="/dashboard"
             class="cta-btn"
@@ -50,7 +46,7 @@
         <div class="title-line" />
       </div>
 
-      <v-progress-linear v-if="pending" indeterminate color="primary" rounded class="mb-6" />
+      <v-progress-linear v-if="pending" indeterminate rounded class="mb-6" color="var(--coffee-bean)" />
 
       <v-alert v-else-if="error" type="error" variant="tonal" rounded="lg" class="mb-6">
         Failed to load books. Is the API running on <code>https://localhost:5000</code>?
@@ -71,13 +67,8 @@ import { booksService } from '~/services/booksService'
 import BookCard from '~/components/common/BookCard.vue'
 import type { BookDto } from '~/types/dtos'
 
-const isAuthenticated = ref(false)
-
-onMounted(() => {
-  const auth = useAuthStore()
-  auth.hydrate()
-  isAuthenticated.value = auth.isAuthenticated
-})
+const auth = useAuthStore()
+auth.hydrate()
 
 const { data, pending, error } = await useAsyncData<BookDto[]>(
   'books',
@@ -110,6 +101,8 @@ const featured = computed(() => {
   width: 100%;
   box-sizing: border-box;
 }
+
+/* ── Hero ── */
 .hero-section {
   position: relative;
   display: flex;
@@ -118,47 +111,88 @@ const featured = computed(() => {
   padding: clamp(3rem, 8vh, 6rem) 0 clamp(2rem, 5vh, 4rem);
   overflow: hidden;
 }
-.hero-content { position: relative; z-index: 1; max-width: 640px; }
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 620px;
+}
+
 .eyebrow {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: rgb(var(--v-theme-primary));
+  color: var(--dusty-olive);
   margin-bottom: 1rem;
 }
+
 .hero-title {
   font-size: clamp(2.25rem, 5vw, 3.75rem);
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.02em;
   margin-bottom: 1.25rem;
-  color: rgba(var(--v-theme-on-surface), 0.95);
+  color: var(--coffee-bean);
 }
-.hero-title em { font-style: italic; color: rgb(var(--v-theme-primary)); }
+
+.hero-title em {
+  font-style: italic;
+  color: var(--camel);
+}
+
 .hero-sub {
   font-size: 1.0625rem;
   line-height: 1.65;
-  color: rgba(var(--v-theme-on-surface), 0.6);
+  color: rgba(0, 0, 0, 0.55);
   max-width: 500px;
   margin-bottom: 2.25rem;
 }
+
 .cta-btn {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1rem;
   letter-spacing: 0.01em;
   padding: 0 2rem !important;
   height: 52px !important;
+  background-color: var(--coffee-bean) !important;
+  color: #fff !important;
 }
-.hero-decoration { position: absolute; inset: 0; pointer-events: none; }
+
+.cta-btn:hover {
+  background-color: var(--camel) !important;
+}
+
+/* Decorative shapes using theme colors */
+.hero-decoration {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 .deco-circle {
   position: absolute;
   border-radius: 50%;
-  opacity: 0.07;
-  background: rgb(var(--v-theme-primary));
+  background: var(--ash-grey);
 }
-.deco-1 { width: 480px; height: 480px; right: -120px; top: -80px; }
-.deco-2 { width: 260px; height: 260px; right: 160px; bottom: -40px; opacity: 0.04; }
+
+.deco-1 {
+  width: 480px;
+  height: 480px;
+  right: -120px;
+  top: -80px;
+  opacity: 0.18;
+}
+
+.deco-2 {
+  width: 260px;
+  height: 260px;
+  right: 160px;
+  bottom: -40px;
+  opacity: 0.1;
+  background: var(--pale-oak);
+}
+
 .deco-ring {
   position: absolute;
   width: 320px;
@@ -166,17 +200,33 @@ const featured = computed(() => {
   right: 60px;
   top: 40px;
   border-radius: 50%;
-  border: 2px solid rgb(var(--v-theme-primary));
-  opacity: 0.1;
+  border: 2px solid var(--camel);
+  opacity: 0.2;
 }
-.books-section { padding-bottom: clamp(3rem, 8vh, 6rem); }
-.section-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
+
+/* ── Books ── */
+.books-section {
+  padding-bottom: clamp(3rem, 8vh, 6rem);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
 .section-title {
   font-size: 1.375rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   white-space: nowrap;
-  color: rgba(var(--v-theme-on-surface), 0.9);
+  color: var(--coffee-bean);
 }
-.title-line { flex: 1; height: 1px; background: rgba(var(--v-theme-on-surface), 0.1); }
+
+.title-line {
+  flex: 1;
+  height: 1px;
+  background: var(--pale-oak);
+}
 </style>

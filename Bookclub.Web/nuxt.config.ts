@@ -3,6 +3,12 @@ import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 export default defineNuxtConfig({
     modules: ['@pinia/nuxt'],
     devtools: { enabled: true },
+
+    runtimeConfig: {
+        public: {
+            apiBase: 'http://localhost:5000',
+        },
+    },
     plugins: ['~/plugins/vuetify.ts'],
 
     css: ['vuetify/styles', '@mdi/font/css/materialdesignicons.css'],

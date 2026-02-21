@@ -6,7 +6,7 @@ import type { AuthResponseDto, LoginRequestDto, RegisterRequestDto } from '~/typ
 export function createAuthService(http: AxiosInstance = api) {
   return {
     async login(payload: LoginRequestDto): Promise<AuthResponseDto> {
-      const res = await http.post<AuthResponseDto>('/api/Auth/login', payload)
+          const res = await http.post<AuthResponseDto>('/api/Auth/login', payload)
       return res.data
     },
 
