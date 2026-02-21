@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>BookClubApp</RootNamespace>
+    <UserSecretsId>16be8af0-adc0-4888-a2ba-174d50f44512</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

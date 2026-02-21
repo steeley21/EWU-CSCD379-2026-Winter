@@ -1,3 +1,4 @@
+// nuxt.config.ts
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 export default defineNuxtConfig({
@@ -7,7 +8,7 @@ export default defineNuxtConfig({
 
     runtimeConfig: {
         public: {
-            apiBase: import.meta.env.NUXT_PUBLIC_API_BASE || 'http://localhost:5000',
+            apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:5000',
         },
     },
     plugins: ['~/plugins/vuetify.ts'],
