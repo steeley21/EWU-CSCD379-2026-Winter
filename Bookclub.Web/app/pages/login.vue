@@ -16,7 +16,6 @@
               <v-form @submit.prevent="submitLogin">
                 <v-text-field v-model="login.username" label="Username" autocomplete="username" />
                 <v-text-field v-model="login.password" label="Password" type="password" autocomplete="current-password" />
-
                 <v-btn :loading="loading" type="submit" color="primary" block class="mt-2">
                   Login
                 </v-btn>
@@ -34,11 +33,9 @@
                     <v-text-field v-model="reg.lname" label="Last name" />
                   </v-col>
                 </v-row>
-
                 <v-text-field v-model="reg.email" label="Email" type="email" autocomplete="email" />
                 <v-text-field v-model="reg.username" label="Username" autocomplete="username" />
                 <v-text-field v-model="reg.password" label="Password" type="password" autocomplete="new-password" />
-
                 <v-btn :loading="loading" type="submit" color="primary" block class="mt-2">
                   Create account
                 </v-btn>
@@ -58,11 +55,13 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/authStore'
 
-const auth = useAuthStore()
-auth.hydrate()
-
-if (auth.isAuthenticated) {
-  await navigateTo('/dashboard')
+// Must only run on client — auth state lives in localStorage
+if (import.meta.client) {
+  const auth = useAuthStore()
+  auth.hydrate()
+  if (auth.isAuthenticated) {
+    await navigateTo('/dashboard')
+  }
 }
 
 const tab = ref<'login' | 'register'>('login')
@@ -76,6 +75,7 @@ async function submitLogin() {
   errMsg.value = ''
   loading.value = true
   try {
+    const auth = useAuthStore()
     await auth.login(login.value)
     await navigateTo('/dashboard')
   } catch (e: any) {
@@ -89,6 +89,7 @@ async function submitRegister() {
   errMsg.value = ''
   loading.value = true
   try {
+    const auth = useAuthStore()
     await auth.register(reg.value)
     await navigateTo('/dashboard')
   } catch (e: any) {
