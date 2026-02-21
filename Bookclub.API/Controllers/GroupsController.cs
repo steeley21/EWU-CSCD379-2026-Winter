@@ -53,17 +53,25 @@ public class GroupsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateGroupDto dto)
     {
-        var group = new Group { GroupName = dto.GroupName, AdminID = CurrentUserId };
+        // Enforce unique group name (case-insensitive)
+        var nameExists = await _db.Groups
+            .AnyAsync(g => g.GroupName.ToLower() == dto.GroupName.ToLower().Trim());
+
+        if (nameExists)
+            return Conflict(new { message = $"A group named \"{dto.GroupName}\" already exists. Please choose a different name." });
+
+        var group = new Group { GroupName = dto.GroupName.Trim(), AdminID = CurrentUserId };
         _db.Groups.Add(group);
         await _db.SaveChangesAsync();
 
-        // Auto-add creator as GroupAdmin role member
+        // Auto-add creator as member
         _db.UserGroups.Add(new UserGroup { UserID = CurrentUserId, GroupID = group.GroupID });
         await _db.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetById), new { id = group.GroupID },
             new GroupDto(group.GroupID, group.GroupName, group.AdminID, "", 1));
     }
+
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateGroupDto dto)
