@@ -17,6 +17,7 @@ public class BooksController : ControllerBase
     public BooksController(ApplicationDbContext db) => _db = db;
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
         var books = await _db.Books

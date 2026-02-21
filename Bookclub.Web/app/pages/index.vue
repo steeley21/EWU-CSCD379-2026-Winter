@@ -158,7 +158,7 @@
         class="status-bar"
       >
         Failed to load books. Is the API running on
-        <code>https://localhost:5000</code>?
+        <code>{{ apiBase }}</code>?
       </v-alert>
 
       <v-row v-else>
@@ -182,6 +182,9 @@ import { useAuthStore } from '~/stores/authStore'
 import { booksService } from '~/services/booksService'
 import BookCard from '~/components/common/BookCard.vue'
 import type { BookDto } from '~/types/dtos'
+
+const config = useRuntimeConfig()
+const apiBase = computed(() => String(config.public.apiBase ?? ''))
 
 const auth = useAuthStore()
 auth.hydrate()
