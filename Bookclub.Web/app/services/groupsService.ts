@@ -86,32 +86,40 @@ function normalizeMember(raw: AnyRec): GroupMemberDto | null {
 }
 
 function normalizeBook(raw: AnyRec): BookDto | null {
-  // Books endpoint may return either BookDto directly or GroupBookDto { book: BookDto }
   const b = (raw.book ?? raw.Book ?? raw) as AnyRec
 
-  // Your API BookDto: (BId, AuthorFirst, AuthorLast, Title, PublishDate, ISBN)
-  const id = toNumber(b.id ?? b.bId ?? b.BId ?? b.bookId ?? b.BookId ?? b.bookID ?? b.BookID)
+  const id = toNumber(
+    b.id ?? b.bookId ?? b.BookId ??
+    b.bId ?? b.BId ?? b.bid ?? b.BID ?? b.bID
+  )
   if (!id) return null
 
+  const title = toStr(b.title ?? b.Title).trim()
+
   const authorFirst = toStr(b.authorFirst ?? b.AuthorFirst).trim()
-  const authorLast = toStr(b.authorLast ?? b.AuthorLast).trim()
+  const authorLast  = toStr(b.authorLast ?? b.AuthorLast).trim()
   const authorCombined = `${authorFirst} ${authorLast}`.trim()
 
   return {
     id,
-    title: b.title ?? b.Title,
-    author: b.author ?? b.Author ?? (authorCombined || undefined),
+    title: title || `Book ${id}`,
+    author: toStr(b.author ?? b.Author).trim() || authorCombined || 'Unknown author',
     description: b.description ?? b.Description,
     createdAt: b.createdAt ?? b.CreatedAt,
-    // keep all extra fields (publishDate/isbn/etc.)
     ...b,
   }
 }
 
+
 function normalizeGroupBook(raw: AnyRec): GroupBookDto | null {
-  // API GroupBookDto: (GBID, GroupID, Book)
-  const gbId = toNumber(raw.gbId ?? raw.GBID ?? raw.id ?? raw.Id)
-  const groupId = toNumber(raw.groupId ?? raw.GroupID ?? raw.GroupId)
+  // API: GroupBookDto(GBID, GroupID, Book) — may serialize as gbid/groupID/book
+  const gbId = toNumber(
+    raw.gbId ?? raw.gbid ?? raw.GBID ?? raw.GBid ?? raw.gBID ?? raw.id ?? raw.Id
+  )
+  const groupId = toNumber(
+    raw.groupId ?? raw.groupID ?? raw.GroupID ?? raw.GroupId
+  )
+
   const bookRaw = raw.book ?? raw.Book
   const book = bookRaw ? normalizeBook(bookRaw) : null
 
@@ -122,8 +130,7 @@ function normalizeGroupBook(raw: AnyRec): GroupBookDto | null {
 function normalizeSchedule(raw: AnyRec): GroupScheduleDto | null {
   // API GroupScheduleDto: (GSID, GroupID, Book, DateTime, Duration, Location)
   const gsId = toNumber(raw.gsId ?? raw.gsid ?? raw.GSID ?? raw.id ?? raw.Id)
-  const groupId = toNumber(raw.groupId ?? raw.GroupID ?? raw.GroupId)
-
+  const groupId = toNumber(raw.groupId ?? raw.groupID ?? raw.GroupID ?? raw.GroupId)
   const bookRaw = raw.book ?? raw.Book
   const book = bookRaw ? normalizeBook(bookRaw) : null
 
@@ -208,6 +215,14 @@ export function createGroupsService(http: AxiosInstance = api) {
 
     async deleteSchedule(groupId: number, gsId: number): Promise<void> {
       await http.delete(`/api/groups/${groupId}/schedule/${gsId}`)
+    },
+
+    async addBook(groupId: number, bookId: number): Promise<void> {
+        await http.post(`/api/groups/${groupId}/books/${bookId}`)
+    },
+
+    async removeBook(groupId: number, gbId: number): Promise<void> {
+        await http.delete(`/api/groups/${groupId}/books/${gbId}`)
     },
   }
 }
