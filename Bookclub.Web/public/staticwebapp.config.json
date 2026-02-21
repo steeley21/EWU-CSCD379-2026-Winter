@@ -2,59 +2,22 @@
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": [
+      "/staticwebapp.config.json",
       "/favicon.ico",
       "/robots.txt",
-
       "/_nuxt/*",
-      "/_nuxt/*/*",
-      "/_nuxt/*/*/*",
-
-      "/_payload.json",
-      "/_payload.js",
-      "/*/_payload.json",
-      "/*/_payload.js",
-      "/*/*/_payload.json",
-      "/*/*/_payload.js",
-      "/*/*/*/_payload.json",
-      "/*/*/*/_payload.js",
-
+      "/assets/*",
       "/*.css",
-      "/*/*.css",
-      "/*/*/*.css",
-
       "/*.js",
-      "/*/*.js",
-      "/*/*/*.js",
-
-      "/*.json",
-      "/*/*.json",
-      "/*/*/*.json",
-
       "/*.map",
-      "/*/*.map",
-      "/*/*/*.map",
-
+      "/*.json",
       "/*.png",
-      "/*/*.png",
-      "/*/*/*.png",
       "/*.jpg",
-      "/*/*.jpg",
-      "/*/*/*.jpg",
       "/*.jpeg",
-      "/*/*.jpeg",
-      "/*/*/*.jpeg",
       "/*.svg",
-      "/*/*.svg",
-      "/*/*/*.svg",
       "/*.ico",
-      "/*/*.ico",
-      "/*/*/*.ico",
       "/*.woff",
-      "/*/*.woff",
-      "/*/*/*.woff",
-      "/*.woff2",
-      "/*/*.woff2",
-      "/*/*/*.woff2"
+      "/*.woff2"
     ]
   }
 }

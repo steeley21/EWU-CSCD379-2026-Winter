@@ -3,10 +3,11 @@ import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 export default defineNuxtConfig({
     modules: ['@pinia/nuxt'],
     devtools: { enabled: true },
+    ssr: false,
 
     runtimeConfig: {
         public: {
-            apiBase: 'http://localhost:5000',
+            apiBase: import.meta.env.NUXT_PUBLIC_API_BASE || 'http://localhost:5000',
         },
     },
     plugins: ['~/plugins/vuetify.ts'],
@@ -26,12 +27,6 @@ export default defineNuxtConfig({
         plugins: [
             vuetify({ autoImport: true }) as any,
         ],
-    },
-
-    // Disable SSR for the whole app - this is a pure SPA talking to a .NET API.
-    // Avoids hydration mismatches and Pinia-before-mount errors entirely.
-    routeRules: {
-        '/**': { ssr: false },
     },
 
     compatibilityDate: '2025-01-01',
