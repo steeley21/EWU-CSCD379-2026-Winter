@@ -91,34 +91,34 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // ── Seed Data (development only; do not fail startup on error) ───────────────
-using (var scope = app.Services.CreateScope())
-{
-    var env = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>();
-    if (env.IsDevelopment())
-    {
-        try
-        {
-            // Attempt to apply migrations first (best-effort)
-            try
-            {
-                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                await db.Database.MigrateAsync();
-            }
-            catch (Exception migrateEx)
-            {
-                var logger = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
-                logger.LogWarning(migrateEx, "Database migration failed; continuing to seeding attempt.");
-            }
+//using (var scope = app.Services.CreateScope())
+//{
+//    var env = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>();
+//    if (env.IsDevelopment())
+//    {
+//        try
+//        {
+//            // Attempt to apply migrations first (best-effort)
+//            try
+//            {
+//                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+//                await db.Database.MigrateAsync();
+//            }
+//            catch (Exception migrateEx)
+//            {
+//                var logger = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
+//                logger.LogWarning(migrateEx, "Database migration failed; continuing to seeding attempt.");
+//            }
 
-            await DataSeeder.SeedAsync(scope.ServiceProvider);
-        }
-        catch (Exception ex)
-        {
-            var logger = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
-            logger.LogError(ex, "Database seeding failed; continuing without seed.");
-        }
-    }
-}
+//            await DataSeeder.SeedAsync(scope.ServiceProvider);
+//        }
+//        catch (Exception ex)
+//        {
+//            var logger = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
+//            logger.LogError(ex, "Database seeding failed; continuing without seed.");
+//        }
+//    }
+//}
 
 // ── Middleware Pipeline ───────────────────────────────────────────────────────
 // Swagger now always enabled, including production
