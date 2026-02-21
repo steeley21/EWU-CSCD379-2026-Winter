@@ -256,12 +256,17 @@ function normalizeTime(raw: string): string | null {
   // "h:mm AM/PM"
   const m12 = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
   if (m12) {
+    const apRaw = m12[3]
+    if (!apRaw) return null
+
     let hh = Number(m12[1])
     const mm = Number(m12[2])
-    const ap = (m12[3] ?? '').toUpperCase()
+    const ap = apRaw.toUpperCase()
+
     if (hh < 1 || hh > 12 || mm < 0 || mm > 59) return null
     if (ap === 'PM' && hh !== 12) hh += 12
     if (ap === 'AM' && hh === 12) hh = 0
+
     return `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}`
   }
 
