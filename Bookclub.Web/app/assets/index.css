@@ -4,8 +4,6 @@
    (imports bookclub-theme.css for tokens, fonts, and utilities)
    ============================================================ */
 
-@import url('assets/bookclub-theme.css');
-
 /* ── Page Shell ── */
 .landing-page {
     min-height: 100vh;
