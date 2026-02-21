@@ -1,92 +1,164 @@
 <template>
   <div class="dashboard">
-    <!-- Header -->
-    <div class="dashboard-header">
-      <div>
-        <div class="eyebrow">Welcome back</div>
-        <h1 class="dashboard-title">{{ auth.username }}</h1>
-        <p class="dashboard-sub">{{ auth.email }}</p>
-      </div>
 
-      <div class="header-badges">
-        <span v-for="role in auth.roles" :key="role" class="role-badge">
-          {{ role }}
-        </span>
+    <!-- ── Header ── -->
+    <div class="dashboard-header">
+      <div class="eyebrow">Welcome back</div>
+      <h1 class="dashboard-title">{{ auth.username }}</h1>
+      <p class="dashboard-sub">{{ auth.email }}</p>
+    </div>
+
+    <!-- ── Stats Row ── -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <!-- Book / library -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+        </div>
+        <div class="stat-label">My Library</div>
+        <div class="stat-value">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">
+          <!-- Users / groups -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="stat-label">My Groups</div>
+        <div class="stat-value">{{ groups.length || '—' }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">
+          <!-- Calendar -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <div class="stat-label">Upcoming Meetings</div>
+        <div class="stat-value">—</div>
       </div>
     </div>
 
-    <!-- Stats row -->
-    <v-row class="mb-6">
-      <v-col cols="12" sm="4">
-        <div class="stat-card">
-          <div class="stat-icon">📚</div>
-          <div class="stat-label">My Library</div>
-          <div class="stat-value">—</div>
-        </div>
-      </v-col>
-      <v-col cols="12" sm="4">
-        <div class="stat-card">
-          <div class="stat-icon">👥</div>
-          <div class="stat-label">My Groups</div>
-          <div class="stat-value">—</div>
-        </div>
-      </v-col>
-      <v-col cols="12" sm="4">
-        <div class="stat-card">
-          <div class="stat-icon">📅</div>
-          <div class="stat-label">Upcoming Meetings</div>
-          <div class="stat-value">—</div>
-        </div>
-      </v-col>
-    </v-row>
+    <!-- ── Quick Actions ── -->
+    <div class="quick-actions-card">
+      <div class="section-card-title">Quick Actions</div>
+      <div class="actions-grid">
+        <button class="action-tile" @click="navigateTo('/books')">
+          <span class="action-icon">
+            <!-- Search -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
+          <span class="action-label">Browse Books</span>
+        </button>
+        <button class="action-tile" @click="navigateTo('/groups')">
+          <span class="action-icon">
+            <!-- Users -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </span>
+          <span class="action-label">Find a Group</span>
+        </button>
+        <button class="action-tile" @click="navigateTo('/library')">
+          <span class="action-icon">
+            <!-- Open book -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+          </span>
+          <span class="action-label">My Library</span>
+        </button>
+        <button class="action-tile" @click="navigateTo('/meetings')">
+          <span class="action-icon">
+            <!-- Calendar -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </span>
+          <span class="action-label">Meetings</span>
+        </button>
+      </div>
+    </div>
 
-    <!-- Quick actions -->
-    <v-card class="bc-card mb-6" rounded="lg">
-      <v-card-title class="section-card-title">Quick Actions</v-card-title>
-      <v-card-text>
-        <div class="actions-grid">
-          <button class="action-tile" @click="navigateTo('/books')">
-            <span class="action-icon">🔍</span>
-            <span class="action-label">Browse Books</span>
-          </button>
-          <button class="action-tile" @click="navigateTo('/groups')">
-            <span class="action-icon">👥</span>
-            <span class="action-label">Find a Group</span>
-          </button>
-          <button class="action-tile" @click="navigateTo('/library')">
-            <span class="action-icon">📖</span>
-            <span class="action-label">My Library</span>
-          </button>
-          <button class="action-tile" @click="navigateTo('/meetings')">
-            <span class="action-icon">📅</span>
-            <span class="action-label">Meetings</span>
-          </button>
+    <!-- ── My Groups ── -->
+    <section class="groups-section">
+      <div class="groups-header">
+        <div class="groups-title-row">
+          <h2 class="groups-title">My Groups</h2>
+          <div class="groups-line" />
         </div>
-      </v-card-text>
-    </v-card>
+        <button class="btn-create-group" @click="navigateTo('/groups/create')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Create Group
+        </button>
+      </div>
 
-    <!-- Account info -->
-    <v-card class="bc-card" rounded="lg">
-      <v-card-title class="section-card-title">Account Info</v-card-title>
-      <v-card-text>
-        <div class="info-row">
-          <span class="info-label">Username</span>
-          <span class="info-value">{{ auth.username }}</span>
+      <div class="groups-grid">
+        <!-- Populated state -->
+        <template v-if="groups.length">
+          <div
+            v-for="group in groups"
+            :key="group.id"
+            class="group-card"
+            @click="navigateTo(`/groups/${group.id}`)"
+          >
+            <div class="group-card-banner" />
+            <div class="group-card-body">
+              <div class="group-card-name">{{ group.name }}</div>
+              <p class="group-card-desc">
+                {{ group.description || 'No description yet.' }}
+              </p>
+              <div class="group-card-meta">
+                <span class="group-meta-pill">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  {{ group.memberCount ?? 1 }} member{{ group.memberCount !== 1 ? 's' : '' }}
+                </span>
+                <span v-if="group.currentBook" class="group-meta-pill">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                  </svg>
+                  Reading now
+                </span>
+                <span class="group-card-arrow">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Empty state -->
+        <div v-else class="groups-empty">
+          <div class="groups-empty-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <div class="groups-empty-text">You're not in any groups yet</div>
+          <p class="groups-empty-sub">
+            Reading is better together. Join an existing group or start your own.
+          </p>
+          <button class="btn-empty-create" @click="navigateTo('/groups/create')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Create a Group
+          </button>
         </div>
-        <div class="info-row">
-          <span class="info-label">Email</span>
-          <span class="info-value">{{ auth.email }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">User ID</span>
-          <span class="info-value muted">{{ auth.userId }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Roles</span>
-          <span class="info-value">{{ auth.roles.join(', ') || 'Member' }}</span>
-        </div>
-      </v-card-text>
-    </v-card>
+      </div>
+    </section>
+
   </div>
 </template>
 
@@ -97,177 +169,16 @@ definePageMeta({ middleware: 'auth' })
 
 const auth = useAuthStore()
 auth.hydrate()
+
+// Replace with your real groups service call, e.g.:
+// const { data: groups } = await useAsyncData('my-groups', () => groupsService.getMine())
+const groups = ref<Array<{
+  id: number | string
+  name: string
+  description?: string
+  memberCount?: number
+  currentBook?: string
+}>>([])
 </script>
 
-<style scoped>
-.dashboard {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 3vw, 2rem);
-}
-
-/* ── Header ── */
-.dashboard-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 2.5rem;
-}
-
-.eyebrow {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--dusty-olive);
-  margin-bottom: 0.35rem;
-}
-
-.dashboard-title {
-  font-size: clamp(1.75rem, 4vw, 2.75rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--coffee-bean);
-  line-height: 1.1;
-}
-
-.dashboard-sub {
-  font-size: 0.9375rem;
-  color: rgba(0,0,0,0.45);
-  margin-top: 0.25rem;
-}
-
-.header-badges {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  padding-top: 0.25rem;
-}
-
-.role-badge {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: var(--pale-oak);
-  color: var(--coffee-bean);
-  border: 1px solid var(--camel);
-  border-radius: 999px;
-  padding: 0.25rem 0.75rem;
-}
-
-/* ── Stat cards ── */
-.stat-card {
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 12px;
-  padding: 1.25rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  height: 100%;
-}
-
-.stat-icon {
-  font-size: 1.5rem;
-  margin-bottom: 0.25rem;
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--dusty-olive);
-}
-
-.stat-value {
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--coffee-bean);
-  line-height: 1;
-}
-
-/* ── Section card title ── */
-.section-card-title {
-  font-size: 1rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.01em !important;
-  color: var(--coffee-bean) !important;
-  padding-bottom: 0 !important;
-}
-
-/* ── Quick actions grid ── */
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 0.75rem;
-  padding-top: 0.5rem;
-}
-
-.action-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 1.25rem 1rem;
-  border-radius: 12px;
-  border: 1px solid var(--pale-oak);
-  background: #fdf9f6;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
-  text-align: center;
-}
-
-.action-tile:hover {
-  background: var(--pale-oak);
-  border-color: var(--camel);
-  transform: translateY(-2px);
-}
-
-.action-icon {
-  font-size: 1.75rem;
-  line-height: 1;
-}
-
-.action-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--coffee-bean);
-}
-
-/* ── Account info ── */
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.65rem 0;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.info-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--dusty-olive);
-}
-
-.info-value {
-  font-size: 0.9375rem;
-  color: var(--coffee-bean);
-  font-weight: 500;
-}
-
-.info-value.muted {
-  font-size: 0.8rem;
-  color: rgba(0,0,0,0.35);
-  font-family: monospace;
-}
-</style>
+<style src="~/assets/dashboard.css" />
