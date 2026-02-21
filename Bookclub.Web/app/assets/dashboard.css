@@ -458,3 +458,44 @@
         transform: translateY(0);
     }
 }
+
+/* ── Loading skeleton ── */
+.groups-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+}
+
+.loading-bar {
+    height: 18px;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, var(--pale-oak) 25%, rgba(220,201,182,0.4) 50%, var(--pale-oak) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    width: 60%;
+}
+
+.loading-bar--short {
+    width: 35%;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* ── Fetch error ── */
+.groups-fetch-error {
+    padding: 1rem 1.25rem;
+    background: #fff5f5;
+    border: 1px solid rgba(185, 74, 72, 0.25);
+    border-radius: var(--radius-md);
+    color: #b94a48;
+    font-size: 0.875rem;
+}

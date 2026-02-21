@@ -28,7 +28,7 @@
           </svg>
         </div>
         <div class="stat-label">My Groups</div>
-        <div class="stat-value">{{ groups.length || '—' }}</div>
+        <div class="stat-value">{{ loading ? '—' : groups.length }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">
@@ -100,33 +100,33 @@
         </button>
       </div>
 
-      <div class="groups-grid">
+      <!-- Loading state -->
+      <div v-if="loading" class="groups-loading">
+        <div class="loading-bar" /><div class="loading-bar loading-bar--short" />
+      </div>
+
+      <!-- Fetch error -->
+      <div v-else-if="fetchError" class="groups-fetch-error">{{ fetchError }}</div>
+
+      <div v-else class="groups-grid">
         <!-- Populated state -->
         <template v-if="groups.length">
           <div
             v-for="group in groups"
-            :key="group.id"
+            :key="group.groupID"
             class="group-card"
-            @click="navigateTo(`/groups/${group.id}`)"
+            @click="navigateTo(`/groups/${group.groupID}`)"
           >
             <div class="group-card-banner" />
             <div class="group-card-body">
-              <div class="group-card-name">{{ group.name }}</div>
-              <p class="group-card-desc">
-                {{ group.description || 'No description yet.' }}
-              </p>
+              <div class="group-card-name">{{ group.groupName }}</div>
+              <p class="group-card-desc">{{ group.adminFullName ? `Admin: ${group.adminFullName}` : 'No description yet.' }}</p>
               <div class="group-card-meta">
                 <span class="group-meta-pill">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                   </svg>
-                  {{ group.memberCount ?? 1 }} member{{ group.memberCount !== 1 ? 's' : '' }}
-                </span>
-                <span v-if="group.currentBook" class="group-meta-pill">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                  </svg>
-                  Reading now
+                  {{ group.memberCount }} member{{ group.memberCount !== 1 ? 's' : '' }}
                 </span>
                 <span class="group-card-arrow">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -168,17 +168,49 @@ import { useAuthStore } from '~/stores/authStore'
 definePageMeta({ middleware: 'auth' })
 
 const auth = useAuthStore()
-auth.hydrate()
 
-// Replace with your real groups service call, e.g.:
-// const { data: groups } = await useAsyncData('my-groups', () => groupsService.getMine())
-const groups = ref<Array<{
-  id: number | string
-  name: string
-  description?: string
-  memberCount?: number
-  currentBook?: string
-}>>([])
+// ── Types ──────────────────────────────────────────────────────
+interface GroupDto {
+  groupID: number
+  groupName: string
+  adminID: string
+  adminFullName: string
+  memberCount: number
+}
+
+// ── State ──────────────────────────────────────────────────────
+const groups = ref<GroupDto[]>([])
+const loading = ref(true)
+const fetchError = ref('')
+
+// ── Fetch user's groups on mount ──────────────────────────────
+onMounted(async () => {
+  auth.hydrate()
+
+  const token = localStorage.getItem('bookclub.token')
+  if (!token) return
+
+  try {
+    // GET /api/Groups returns all groups; filter to ones the current user is a member of
+    // The API returns adminID and we have auth.userId to match against membership.
+    // Since there's no GET /api/Groups/mine endpoint, we fetch all and filter by
+    // whether the current user is the admin OR a member.
+    // For now we filter by adminID — extend once a /me/groups endpoint exists.
+    const all = await $fetch<GroupDto[]>('http://localhost:5000/api/Groups', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    // Show groups where the current user is admin or a member.
+    // The API returns memberCount but not member IDs, so we filter by adminID for now.
+    // TODO: replace with GET /api/Groups/mine once that endpoint is added.
+    groups.value = all.filter(g => g.adminID === auth.userId)
+  } catch (e) {
+    fetchError.value = 'Could not load your groups. Please refresh.'
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <style src="~/assets/dashboard.css" />
