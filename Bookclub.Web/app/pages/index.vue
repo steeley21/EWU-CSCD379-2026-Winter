@@ -183,11 +183,6 @@ import { booksService } from '~/services/booksService'
 import BookCard from '~/components/common/BookCard.vue'
 import type { BookDto } from '~/types/dtos'
 
-// Theme tokens, fonts, and utilities (variables used by assets/index.css)
-import 'assets/bookclub-theme.css'
-// Page-level styles (imports theme internally via @import)
-import '~/assets/index.css'
-
 const auth = useAuthStore()
 auth.hydrate()
 
@@ -210,3 +205,5 @@ const featured = computed(() => {
   return sorted.slice(0, 6)
 })
 </script>
+
+<style src="~/assets/index.css" />
