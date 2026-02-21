@@ -121,11 +121,12 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ── Middleware Pipeline ───────────────────────────────────────────────────────
-if (app.Environment.IsDevelopment())
+// Swagger now always enabled, including production
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "BookClub API V1");
+});
 
 app.UseHttpsRedirection();
 app.UseCors("AllowNuxt");
