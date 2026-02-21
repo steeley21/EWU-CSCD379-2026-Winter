@@ -19,10 +19,6 @@ export const api: AxiosInstance = axios.create({
   },
 })
 
-/**
- * Sets the Axios base URL for all API calls.
- * Example: "https://localhost:5001" or "http://localhost:5000"
- */
 export function setApiBaseUrl(baseUrl: string) {
   const normalized = normalizeBaseUrl(baseUrl)
   api.defaults.baseURL = normalized
