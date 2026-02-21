@@ -1,0 +1,54 @@
+name: Build and deploy ASP.Net Core app to Azure Web App - bookclub-api
+
+on:
+  push:
+    branches:
+      - Assignment4
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read # required for actions/checkout
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Build with dotnet
+        run: dotnet build --configuration Release
+        working-directory: ./Bookclub.API   
+
+      - name: dotnet publish
+        run: dotnet publish -c Release -o ./publish
+        working-directory: ./Bookclub.API   
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: .net-app
+          path: ./Bookclub.API/publish
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'Book-Club-Api'    #  Azure Web App name
+          slot-name: 'Production'
+          package: .
+          publish-profile: ${{ secrets.BOOKCLUB_API_PUBLISH_PROFILE }}
