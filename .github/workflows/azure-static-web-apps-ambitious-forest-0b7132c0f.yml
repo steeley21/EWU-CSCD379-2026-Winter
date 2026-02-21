@@ -25,6 +25,8 @@ jobs:
 
       - name: Install + Generate
         working-directory: Bookclub.Web
+        env:
+          NUXT_PUBLIC_API_BASE: https://book-club-api-frh4f4akd7eubkhu.eastus-01.azurewebsites.net
         run: |
           npm ci
           npm run generate
@@ -37,4 +39,5 @@ jobs:
         env:
           SWA_CLI_DEPLOYMENT_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_FOREST_0B7132C0F }}
         run: |
+
           npx -y @azure/static-web-apps-cli@2.0.2 deploy .output/public --env production
