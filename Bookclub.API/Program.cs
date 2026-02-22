@@ -125,6 +125,20 @@ var app = builder.Build();
 //    }
 //}
 
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        await BookClubApp.Data.AdminSeeder.SeedAsync(scope.ServiceProvider);
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("AdminSeeder");
+        logger.LogError(ex, "AdminSeeder failed; continuing startup.");
+    }
+}
+
 // ── Middleware Pipeline ───────────────────────────────────────────────────────
 // Swagger now always enabled, including production
 app.UseSwagger();
