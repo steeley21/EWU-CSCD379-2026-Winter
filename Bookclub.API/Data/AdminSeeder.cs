@@ -7,8 +7,7 @@ public static class AdminSeeder
 {
     private static readonly string[] AdminUserIds =
     {
-        "cf263384-7a99-41b5-a927-b29915e484a2", 
-        "055d4e35-c62c-4835-a947-f175248ee782" 
+        // Add the user IDs of the admin users here
     };
 
     public static async Task SeedAsync(IServiceProvider services)

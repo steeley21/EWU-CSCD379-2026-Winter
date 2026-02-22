@@ -466,7 +466,6 @@ public class BooksController : ControllerBase
         return candidates.FirstOrDefault();
     }
 
-    // Keeping this method (unused now) is harmless; remove if you prefer.
     private async Task<(string? isbn, int? year)> LookupOpenLibraryAsync(string title, string author)
     {
         var client = _http.CreateClient();
@@ -497,5 +496,146 @@ public class BooksController : ControllerBase
         }
 
         return (null, null);
+    }
+
+    [HttpPost("admin/repair-books")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> RepairBooks(
+    [FromQuery] int max = 200,
+    [FromQuery] bool force = false,
+    [FromQuery] bool repairIsbn = true,
+    [FromQuery] bool repairPublishYear = true)
+    {
+        if (max < 1) max = 1;
+        if (max > 500) max = 500;
+
+        // Pull deterministic set (you can change selection logic if desired)
+        var books = await _db.Books
+            .OrderBy(b => b.BId)
+            .Take(max)
+            .ToListAsync();
+
+        var checkedCount = 0;
+        var updated = 0;
+        var skipped = 0;
+        var failed = 0;
+
+        foreach (var b in books)
+        {
+            checkedCount++;
+
+            try
+            {
+                var title = (b.Title ?? "").Trim();
+                var author = $"{(b.AuthorFirst ?? "").Trim()} {(b.AuthorLast ?? "").Trim()}".Trim();
+
+                if (string.IsNullOrWhiteSpace(title))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                // Current values
+                var currentIsbn = NormalizeIsbn(b.ISBN);
+                var currentYear = b.PublishDate?.Year;
+
+                // Decide whether this row needs repair (unless force)
+                bool needsIsbnRepair = false;
+                if (repairIsbn)
+                {
+                    if (string.IsNullOrWhiteSpace(currentIsbn))
+                    {
+                        needsIsbnRepair = true;
+                    }
+                    else
+                    {
+                        // If ISBN exists but has no cover, we want a better one
+                        var hasCover = await HasCoverForIsbnAsync(currentIsbn);
+                        if (!hasCover) needsIsbnRepair = true;
+                    }
+                }
+
+                bool needsYearRepair = false;
+                if (repairPublishYear)
+                {
+                    // PublishDate is stored as YYYY-01-01; treat missing as needing repair
+                    needsYearRepair = !b.PublishDate.HasValue;
+                }
+
+                if (!force && !needsIsbnRepair && !needsYearRepair)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                // Ask OpenLibrary for candidates (and year)
+                var (candidates, year) = await LookupOpenLibraryIsbnsAsync(title, author);
+
+                // Apply ISBN repair (prefer one that has a cover)
+                if (repairIsbn && candidates.Count > 0)
+                {
+                    var best = await ChooseIsbnWithCoverAsync(candidates);
+                    best = NormalizeIsbn(best);
+
+                    if (!string.IsNullOrWhiteSpace(best) && (force || needsIsbnRepair))
+                    {
+                        if (!string.Equals(currentIsbn, best, StringComparison.OrdinalIgnoreCase))
+                        {
+                            b.ISBN = best;
+                        }
+                    }
+                }
+
+                // Apply publish year repair
+                if (repairPublishYear && year.HasValue && year.Value >= 1000 && year.Value <= 9999)
+                {
+                    if (force || needsYearRepair)
+                    {
+                        if (currentYear != year.Value)
+                        {
+                            b.PublishDate = new DateTime(year.Value, 1, 1);
+                        }
+                    }
+                }
+
+                // Did we actually change anything?
+                // (Comparing to computed current is annoying after changes, so just count if EF marked it modified)
+                if (_db.Entry(b).State == EntityState.Modified)
+                    updated++;
+                else
+                    skipped++;
+            }
+            catch
+            {
+                failed++;
+            }
+        }
+
+        if (updated > 0)
+            await _db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            checkedCount,
+            updated,
+            skipped,
+            failed,
+            max,
+            force,
+            repairIsbn,
+            repairPublishYear
+        });
+    }
+
+    private static string? NormalizeIsbn(string? isbn)
+    {
+        if (string.IsNullOrWhiteSpace(isbn)) return null;
+
+        // Remove hyphens/spaces and take first token if multiple
+        var token = isbn.Trim().Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(token)) return null;
+
+        token = token.Replace("-", "").Trim();
+        return token.Length >= 10 ? token : null;
     }
 }
