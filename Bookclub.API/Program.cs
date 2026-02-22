@@ -84,7 +84,7 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins("http://localhost:3000", 
             "https://localhost:3000",
-            "https://ambitious-forest-0b7132c0f.2.azurestaticapps.net/"
+            "https://ambitious-forest-0b7132c0f.2.azurestaticapps.net"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
