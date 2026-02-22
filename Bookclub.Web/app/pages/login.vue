@@ -32,7 +32,7 @@
                 </v-col>
               </v-row>
               <v-text-field v-model="reg.email" label="Email" type="email" autocomplete="email" />
-              <v-text-field v-model="reg.email" label="Email" autocomplete="email" />
+              <v-text-field v-model="reg.username" label="Username" autocomplete="username" />
               <v-text-field v-model="reg.password" label="Password" type="password" autocomplete="new-password"
                 @keyup.enter="submitRegister" />
               <v-btn :loading="loading" color="primary" block class="mt-2" @click="submitRegister">
