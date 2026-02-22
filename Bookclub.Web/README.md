@@ -4,7 +4,7 @@ Nuxt 3 + Vuetify 3 + TypeScript frontend for the BookClub line-of-business appli
 
 **Live site:** https://ambitious-forest-0b7132c0f.2.azurestaticapps.net/
 
-> ⚠️ **API status:** The backend is not deployed yet, so the live site’s API-powered areas may error unless the API is running locally.
+> If the live site shows API errors, confirm the **API is running locally** (dev) or that the deployed site has the correct `NUXT_PUBLIC_API_BASE` configured in Azure Static Web Apps settings.
 
 ---
 
@@ -13,13 +13,14 @@ Nuxt 3 + Vuetify 3 + TypeScript frontend for the BookClub line-of-business appli
 - **Vue 3 + Vuetify 3**
 - **TypeScript**
 - **Axios services** (see `/app/services`)
+- **Pinia store** for auth (`/app/stores/authStore.ts`)
 - **Route middleware** for auth/role gating (see `/app/middleware`)
-- **Azure Static Web Apps** (static hosting)
+- **Azure Static Web Apps** (static hosting / static generate)
 - **Vitest:** not added yet (required for Assignment 4 service tests)
 
 ---
 
-## Local API Base URL (IMPORTANT — team setup)
+## API Base URL (IMPORTANT — team setup)
 
 The frontend reads the API base URL from **runtime config**:
 
@@ -39,7 +40,7 @@ Our API is configured to listen on:
 - **HTTP:** `http://localhost:5000`
 - **HTTPS:** `https://localhost:5001`
 
-If Swagger “moves” from 5001 → 5000, it usually means the API was launched using the **http** launch profile (or HTTPS isn’t being used). Ensure your API binds both ports (recommended) or run:
+If Swagger “moves” from 5001 → 5000, it usually means the API was launched using the **http** launch profile. You can run:
 
 ```bash
 dotnet run --launch-profile https
@@ -57,7 +58,7 @@ dotnet run --launch-profile https
 ### Public (no login required)
 - `/` (Landing page)
   - Shows “Featured Books” pulled from the API  
-  - **Requires API GET /api/Books to be public** (`[AllowAnonymous]`)
+  - **Requires API `GET /api/Books` to be public** (`[AllowAnonymous]`)
 
 ### Auth Required
 - `/login`
@@ -68,13 +69,16 @@ dotnet run --launch-profile https
   - Shows “My Groups” (see limitations)
 - `/groups`
   - Requires login (`middleware: auth`)
-  - Groups browsing (and entry point to group profile)
+  - Groups browsing (and entry point to group pages)
 - `/groups/create`
   - Requires login (`middleware: auth`)
   - Creates a group via `POST /api/Groups`
-- `/groups/[id]`
+- `/groups/:id`
   - Requires login (`middleware: auth`)
   - Group profile page (members, books, schedule)
+- `/groups/:id/library`
+  - Requires login (`middleware: auth`)
+  - Group library page (all group books as a grid + details modal)
 
 ### Admin Only
 - `/admin`
@@ -92,26 +96,41 @@ Frontend recognizes:
 
 ## Groups MVP (Frontend)
 
-### Implemented on `/groups/[id]`
-- **Members (read):** displays group members from `GET /api/Groups/{id}/members`
+### Group Profile: `/groups/:id`
+- **Members (read):** `GET /api/Groups/{id}/members`
 - **Books (add/remove):**
-  - Lists group books from `GET /api/Groups/{id}/books` (returns GroupBookDto)
-  - Add book dialog uses:
-    - `GET /api/Books` (catalog)
-    - `POST /api/Groups/{id}/books/{bookId}` (adds to group)
-  - Remove uses:
+  - List: `GET /api/Groups/{id}/books` (returns `GroupBookDto`)
+  - Add flow (Add Book dialog):
+    - `GET /api/Books/search?q=...` (DB-first search + OpenLibrary fallback)
+    - If OpenLibrary result: `POST /api/Books/save-from-catalog` (persist → returns DB book)
+    - Add to group: `POST /api/Groups/{id}/books/{bookId}`
+  - Remove:
     - `DELETE /api/Groups/{id}/books/{gbId}` (removes by group-book id)
 - **Schedule (add/delete + display):**
-  - Loads schedule via `GET /api/Groups/{id}/schedule`
-  - Add meeting dialog posts `CreateGroupScheduleDto` fields:
+  - Load: `GET /api/Groups/{id}/schedule`
+  - Add meeting posts `CreateGroupScheduleDto` fields:
     - `bId`, `dateTime` (ISO), `duration`, `location`
-  - Delete meeting:
+  - Delete:
     - `DELETE /api/Groups/{id}/schedule/{gsId}`
-  - Schedule card shows **Next** + **Upcoming** meetings.
+  - UI shows **Next** + **Upcoming** meetings.
 
-### Notes
-- The schedule dialog’s Book dropdown is driven by the group’s current book list (so adding books is required before scheduling).
-- The frontend includes response normalization to handle mixed casing (`groupID`, `gbid`, `gsid`, `bId`, etc.) from API JSON.
+### Group Library: `/groups/:id/library`
+- Displays **all group books** (from `GET /api/Groups/{id}/books`) as a grid with:
+  - **Cover**, **title**, **author**
+- Clicking a book opens a details modal:
+  - Cover, author, publish date
+  - Meeting dates for that book (derived from `GET /api/Groups/{id}/schedule`)
+  - Description fetched **live from OpenLibrary** (client-side):
+    - `https://openlibrary.org/isbn/{isbn}.json`
+    - then (if needed) `https://openlibrary.org{workKey}.json`
+  - Uses a small in-memory cache so the same ISBN isn’t fetched repeatedly.
+
+---
+
+## Book Covers (thumbnails)
+- Covers are displayed using **OpenLibrary Covers API** (client-side) using the book ISBN:
+  - `https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg?default=false`
+- `default=false` forces a **404 for missing covers**, so the UI can reliably show the placeholder.
 
 ---
 
@@ -141,22 +160,25 @@ Bookclub.Web/
 ├── app/
 │   ├── assets/                 # global/theme CSS
 │   ├── components/
-│   │   ├── common/             # reusable components (NavBar, BookCard)
+│   │   ├── common/             # reusable components
 │   │   └── groups/             # group UI cards (Members, Books, Schedule)
 │   ├── layouts/                # default layout
 │   ├── middleware/             # auth/admin gating
 │   ├── pages/
 │   │   ├── groups/
 │   │   │   ├── create.vue
-│   │   │   └── [id].vue        # group profile (dynamic route)
+│   │   │   └── [id]/
+│   │   │       ├── index.vue   # group profile page
+│   │   │       └── library.vue # group library page
 │   │   ├── admin/              # admin routes (books)
 │   │   ├── index.vue           # landing page
 │   │   ├── login.vue
 │   │   └── dashboard.vue
-│   ├── plugins/                # vuetify.ts, api.ts (sets axios baseURL)
+│   ├── plugins/                # api.ts (sets axios baseURL)
 │   ├── services/               # axios services (api/auth/books/groups)
 │   ├── stores/                 # pinia stores (authStore)
-│   └── types/                  # DTO typings
+│   ├── types/                  # DTO typings
+│   └── utils/                  # shared book helpers (covers, author label, isbn extraction)
 ├── public/                     # favicon, robots.txt, staticwebapp.config.json
 └── nuxt.config.ts
 ```
@@ -219,7 +241,7 @@ This repo includes `public/staticwebapp.config.json` with a navigation fallback 
 - Deployment uploads the generated site from:
   - `Bookclub.Web/.output/public`
 
-> Once the API is deployed, update this README with the production API URL and set `NUXT_PUBLIC_API_BASE` via Azure SWA environment settings.
+> After API deployment, configure `NUXT_PUBLIC_API_BASE` in Azure Static Web Apps environment settings.
 
 ---
 
@@ -253,14 +275,14 @@ This keeps the repo stable for everyone.
   - ✅ Admin-only pages: `/admin/*`
 - ✅ Groups MVP UI
   - ✅ Create group (`/groups/create`)
-  - ✅ Group profile (`/groups/[id]`) with members/books/schedule cards
-  - ✅ Add/remove group books
+  - ✅ Group profile (`/groups/:id`) with members/books/schedule cards
+  - ✅ Add/remove group books (DB-first + OpenLibrary save-from-catalog)
   - ✅ Add/delete meetings
+  - ✅ Group Library page (`/groups/:id/library`) with cover grid + details modal
 - ✅ Code organization
   - ✅ Vue components used
   - ✅ API calls centralized in `/app/services`
 - ❌ Unit testing for services (Vitest not added yet)
-- ⏳ SQL Azure / API deployment still in progress (backend work)
 
 ---
 
@@ -269,6 +291,4 @@ This keeps the repo stable for everyone.
 2. Members management UI on group profile:
    - add member (admin) + remove member (admin/self)
 3. Replace dashboard “My Groups” filtering once `/api/groups/mine` exists.
-4. After API deployment:
-   - update README with the production API URL
-   - configure `NUXT_PUBLIC_API_BASE` in Azure SWA settings
+4. Consider caching book descriptions (beyond in-memory) if OpenLibrary rate limits become an issue.

@@ -2,16 +2,28 @@
   <v-card class="bc-card" rounded="lg">
     <div class="gp-head">
       <div>
-        <div class="gp-title">Books <span class="gp-count">({{ groupBooks.length }})</span></div>
+        <div class="gp-title">
+          Books <span class="gp-count">({{ groupBooks.length }})</span>
+        </div>
         <div class="gp-sub">Books currently in this group</div>
       </div>
 
-      <button v-if="canManage" class="gp-btn" type="button" @click="$emit('add')">
-        + Add book
-      </button>
+      <div class="gp-actions">
+        <button
+          class="gp-btn-ghost"
+          type="button"
+          @click="$emit('library')"
+        >
+          Library
+        </button>
+
+        <button v-if="canManage" class="gp-btn" type="button" @click="$emit('add')">
+          + Add book
+        </button>
+      </div>
     </div>
 
-    <v-card-text>
+    <v-card-text class="pt-0">
       <v-progress-linear v-if="loading" indeterminate color="var(--camel)" />
       <div v-else-if="error" class="gp-error">{{ error }}</div>
 
@@ -67,10 +79,12 @@
 
 <script setup lang="ts">
 import type { GroupBookDto } from '~/types/dtos'
+import { authorLabel, coverUrl } from '~/utils/books'
 
 defineEmits<{
   (e: 'add'): void
   (e: 'remove', gbId: number): void
+  (e: 'library'): void
 }>()
 
 const props = defineProps<{
@@ -80,43 +94,35 @@ const props = defineProps<{
   error: string
 }>()
 
-function authorLabel(b: any): string {
-  const a = String(b?.author ?? '').trim()
-  if (a) return a
-  const combined = `${String(b?.authorFirst ?? '').trim()} ${String(b?.authorLast ?? '').trim()}`.trim()
-  return combined || 'Unknown author'
-}
-
-function coverUrl(b: any): string | null {
-  const raw = String(b?.isbn ?? b?.ISBN ?? '').trim()
-  if (!raw) return null
-
-  // ISBN sometimes comes as "978..." or "978...; 123..." or with spaces
-  const isbn = raw.split(/[,\s;]/).find(x => x && x.length >= 10) ?? ''
-  if (!isbn) return null
-
-  // OpenLibrary Covers API
-  return `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(isbn)}-M.jpg`
-}
-
 const preview = computed(() => props.groupBooks.slice(0, 4))
 </script>
 
 <style scoped>
 .gp-head{
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:space-between;
   gap:1rem;
   padding: 1rem 1rem 0.25rem;
 }
+
+.gp-actions{
+  display:flex;
+  align-items:center;
+  gap:0.6rem;
+  flex-wrap: wrap; /* helps on tight widths */
+  justify-content:flex-end;
+}
+
 .gp-title{
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 1.1rem;
   color: var(--coffee-bean);
 }
+
 .gp-count { color: var(--text-muted); font-weight: 500; margin-left: 0.25rem; }
+
 .gp-sub{
   color: var(--text-muted);
   font-size: 0.9rem;
@@ -146,13 +152,13 @@ const preview = computed(() => props.groupBooks.slice(0, 4))
 
 .gp-btn-ghost{
   font-family: var(--font-body);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--coffee-bean);
   background: transparent;
   border: 1px solid var(--pale-oak);
   border-radius: var(--radius-pill);
-  padding: 0.42rem 0.85rem;
+  padding: 0.5rem 1rem;
   cursor:pointer;
   transition: border-color var(--ease), background var(--ease);
 }

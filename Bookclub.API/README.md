@@ -1,6 +1,9 @@
 # BookClub App — Backend (Bookclub.API)
 
-ASP.NET Core 8 Web API with Entity Framework Core 8 and ASP.NET Core Identity (JWT auth).
+ASP.NET Core 8 Web API with Entity Framework Core 8 and ASP.NET Core Identity (JWT auth).  
+Includes DB-first book search with **OpenLibrary** fallback, plus ISBN/cover support for the frontend.
+
+**Live API:** https://book-club-api-frh4f4akd7eubkhu.eastus-01.azurewebsites.net/swagger/index.html
 
 ---
 
@@ -10,11 +13,11 @@ ASP.NET Core 8 Web API with Entity Framework Core 8 and ASP.NET Core Identity (J
 BookClubApp/
 ├── Controllers/
 │   ├── AuthController.cs       # Register, Login → JWT
-│   ├── BooksController.cs      # Books CRUD
+│   ├── BooksController.cs      # Books CRUD + Search + Save-from-catalog + Admin backfill
 │   └── GroupsController.cs     # Groups, Members, Books, Schedule
 ├── Data/
 │   ├── ApplicationDbContext.cs # EF DbContext + model config
-│   └── DataSeeder.cs           # Role + seed data
+│   └── DataSeeder.cs           # Optional seed data (if enabled)
 ├── DTOs/
 │   ├── AuthDtos.cs             # Register/Login/Response DTOs
 │   └── AppDtos.cs              # Book, Group, Schedule DTOs
@@ -28,7 +31,7 @@ BookClubApp/
 │   └── UserGroup.cs            # User ↔ Group (UGID)
 ├── Properties/
 │   └── launchSettings.json     # Local ports (5000/5001)
-├── Program.cs                  # DI, middleware, CORS, role seeding, migrations
+├── Program.cs                  # DI, middleware, CORS, Swagger, optional seeding
 ├── appsettings.json            # Connection string + JWT config (default)
 └── BookClubApp.csproj          # NuGet packages
 ```
@@ -40,13 +43,17 @@ BookClubApp/
 | Entity | Key Fields |
 |---|---|
 | **Book** | BId, AuthorFirst, AuthorLast, Title, PublishDate, ISBN |
-| **User** (Identity) | UserID, FName, LName, Email, Username |
+| **User** (Identity) | Id, FName, LName, Email, Username |
 | **Group** | GroupID, GroupName, AdminID (→ User) |
-| **GroupBooks** | GBID, GroupID, BId |
-| **Users_Groups** | UGID, UserID, GroupID |
+| **GroupBook** | GBID, GroupID, BId |
+| **UserGroup** | UGID, UserID, GroupID |
 | **GroupSchedule** | GSID, GroupID, BId, DateTime, Duration, Location |
 
-**Roles (Personas):** `Admin`, `GroupAdmin`, `Member`
+### Roles in use
+- `Admin`
+- `Member`
+
+> “Group admin” is modeled via `Group.AdminID` (group owner), not an Identity Role.
 
 ---
 
@@ -62,7 +69,9 @@ Configured in `Properties/launchSettings.json`:
 - **HTTPS:** `https://localhost:5001`
 - **Swagger:** `https://localhost:5001/swagger`
 
-> If you change ports locally, update the frontend `.env` (`NUXT_PUBLIC_API_BASE=...`).
+---
+
+## Database Setup
 
 ### 1) Restore + build
 ```bash
@@ -70,18 +79,12 @@ dotnet restore
 dotnet build
 ```
 
-### 2) Database connection (default)
-Repo default connection string (in `appsettings.json`) targets the standard LocalDB instance:
+### 2) Default connection string
+Repo default connection string (in `appsettings.json`) targets standard LocalDB:
 - `(localdb)\MSSQLLocalDB`
 
-Most teammates should be able to run using this without changes.
-
 ### 3) If LocalDB is broken on your machine (do NOT change the repo)
-Some Windows/NVMe setups can cause LocalDB to fail to start. If that happens, **do not modify `appsettings.json` and commit it**.
-
-Instead:
-1. Create a new LocalDB instance (example name: `BookClubLocal`)
-2. Override the connection string using **User Secrets** (machine-local, not committed)
+Use **User Secrets** instead of committing connection string changes.
 
 ```bash
 sqllocaldb create BookClubLocal
@@ -91,10 +94,7 @@ dotnet user-secrets init
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=(localdb)\BookClubLocal;Database=BookClubDb;Trusted_Connection=True;MultipleActiveResultSets=true"
 ```
 
-> IMPORTANT: In User Secrets / terminal commands, use a **single** backslash: `(localdb)\BookClubLocal` should be typed as `(localdb)\BookClubLocal` in JSON files, but as `(localdb)\BookClubLocal` **with a single `\` character** in a raw string.  
-> Example you should type into the terminal: `Server=(localdb)\BookClubLocal;...` (one backslash in the actual value).
-
-### 4) Apply migrations (create DB)
+### 4) Apply migrations (create/update DB)
 ```bash
 dotnet ef database update
 ```
@@ -109,24 +109,42 @@ dotnet run
 ## CORS (frontend dev)
 Frontend dev server runs at: `http://localhost:3000`
 
-Ensure CORS allows the Nuxt origin(s), typically:
+CORS should allow:
 - `http://localhost:3000`
 - `https://localhost:3000` (only if you run Nuxt over https)
+- your deployed Azure Static Web Apps origin
 
 ---
 
-## Authentication & Authorization (important for frontend)
+## Authentication & Authorization
 
-- JWT is returned from `/api/auth/register` and `/api/auth/login`
-- Frontend stores it in localStorage: `bookclub.token`
-- Axios attaches it as `Authorization: Bearer <token>`
+- JWT is returned from:
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
+- Frontend stores token as: `bookclub.token`
+- Requests include: `Authorization: Bearer <token>`
 
-### Public endpoints
-To support a public landing page with featured books:
-- `GET /api/Books` and `GET /api/Books/{id}` are **AllowAnonymous**
+### Swagger auth tip
+Most endpoints require auth. In Swagger UI:
+1. Call `/api/auth/login`
+2. Copy the returned `token`
+3. Click **Authorize** and enter:
+   - `Bearer <token>`
 
-### Protected endpoints
-- Writes (POST/PUT/DELETE) are protected by `[Authorize]` (and role checks where required)
+---
+
+## Book Search + OpenLibrary Integration
+
+### Covers
+The frontend uses OpenLibrary Covers API using the stored ISBN:
+- `https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg?default=false`
+
+To support covers consistently, the backend attempts to store the “best” ISBN (prefer ISBN-13 and prefer ISBNs that actually have a cover).
+
+### Description
+The frontend fetches book descriptions directly from OpenLibrary (client-side) via:
+- `https://openlibrary.org/isbn/{isbn}.json`
+- then (if needed) the Work endpoint: `https://openlibrary.org{workKey}.json`
 
 ---
 
@@ -143,32 +161,37 @@ To support a public landing page with featured books:
 |---|---|---|
 | GET | `/api/books` | All books (**public**) |
 | GET | `/api/books/{id}` | Single book (**public**) |
-| POST | `/api/books` | Add book (auth required) |
-| PUT | `/api/books/{id}` | Update book (auth required) |
-| DELETE | `/api/books/{id}` | Delete (Admin only) |
+| GET | `/api/books/search?q=...` | DB-first search + OpenLibrary fallback (**auth required**) |
+| POST | `/api/books/save-from-catalog` | Persist an OpenLibrary result to DB (**auth required**) |
+| POST | `/api/books` | Add book (**auth required**) |
+| PUT | `/api/books/{id}` | Update book (**auth required**) |
+| DELETE | `/api/books/{id}` | Delete (**Admin only**) |
+| POST | `/api/books/admin/backfill-isbn?max=50` | Backfill ISBN for DB books missing ISBN (**Admin only**) |
+
+> `search` is routed explicitly so it won’t be mistaken for `{id}`.
 
 ### Groups
 | Method | Route | Description |
 |---|---|---|
 | GET | `/api/groups` | All groups (auth required) |
 | GET | `/api/groups/{id}` | Single group (auth required) |
-| POST | `/api/groups` | Create group (auth required; caller becomes admin) |
-| PUT | `/api/groups/{id}` | Rename group (admin only) |
-| DELETE | `/api/groups/{id}` | Delete group (admin only) |
+| POST | `/api/groups` | Create group (auth required; caller becomes group admin) |
+| PUT | `/api/groups/{id}` | Rename group (group admin or Admin) |
+| DELETE | `/api/groups/{id}` | Delete group (group admin or Admin) |
 | GET | `/api/groups/{id}/members` | List members |
-| POST | `/api/groups/{id}/members/{userId}` | Add member |
-| DELETE | `/api/groups/{id}/members/{userId}` | Remove member |
+| POST | `/api/groups/{id}/members/{userId}` | Add member (group admin or Admin) |
+| DELETE | `/api/groups/{id}/members/{userId}` | Remove member (group admin/self/Admin depending on endpoint rules) |
 | GET | `/api/groups/{id}/books` | Group book list |
-| POST | `/api/groups/{id}/books/{bookId}` | Add book to group |
-| DELETE | `/api/groups/{id}/books/{gbId}` | Remove book from group |
+| POST | `/api/groups/{id}/books/{bookId}` | Add book to group (group admin or Admin) |
+| DELETE | `/api/groups/{id}/books/{gbId}` | Remove book from group (group admin or Admin) |
 | GET | `/api/groups/{id}/schedule` | Group schedule |
-| POST | `/api/groups/{id}/schedule` | Add schedule entry |
-| DELETE | `/api/groups/{id}/schedule/{gsId}` | Remove schedule entry |
+| POST | `/api/groups/{id}/schedule` | Add schedule entry (group admin or Admin) |
+| DELETE | `/api/groups/{id}/schedule/{gsId}` | Remove schedule entry (group admin or Admin) |
+
 
 ---
 
 ## Production Notes
-- Store `Jwt:Key` in environment variables or Azure Key Vault (do not commit secrets)
-- Use `appsettings.Production.json` for prod connection strings (or Azure App Settings)
-- Lock CORS down to your deployed frontend origin (do not use wildcard in production)
-- Apply EF migrations during deploy (CI/CD or startup migration strategy)
+- Store `Jwt:Key` in environment variables or a secret store (do not commit secrets)
+- Lock CORS down to your deployed frontend origin (avoid wildcards in production)
+- Apply EF migrations during deploy (CI/CD) or adopt a safe startup migration strategy

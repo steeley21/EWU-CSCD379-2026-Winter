@@ -1,3 +1,4 @@
+<!-- /app/pages/groups/[id]/index.vue -->
 <template>
   <div class="group-profile">
     <div class="gp-header">
@@ -31,6 +32,7 @@
           :error="booksError"
           @add="openAddBook"
           @remove="removeGroupBook"
+          @library="goToLibrary"
         />
       </v-col>
 
@@ -234,10 +236,6 @@ const currentBook = computed<BookDto | null>(() => books.value[0] ?? null)
 // Add Book dialog state
 // ─────────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────
-// Add Book dialog state
-// ─────────────────────────────────────────────────────────────
-
 import type { BookSearchResult } from '~/services/booksService'
 
 const bookDialog = ref(false)
@@ -344,6 +342,12 @@ async function removeGroupBook(gbId: number) {
   } finally {
     loadingBooks.value = false
   }
+}
+
+const router = useRouter()
+
+function goToLibrary() {
+  router.push(`/groups/${groupId.value}/library`)
 }
 
 // ─────────────────────────────────────────────────────────────
