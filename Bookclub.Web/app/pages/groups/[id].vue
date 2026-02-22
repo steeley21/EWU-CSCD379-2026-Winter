@@ -291,12 +291,23 @@ async function saveGroupBook() {
     let bookId: number
 
     if (chosenBook.value.source === 'db' && chosenBook.value.id != null) {
-      // Already in your DB, use it directly
-      bookId = chosenBook.value.id
+      bookId = Number(chosenBook.value.id)
+      if (!Number.isFinite(bookId) || bookId <= 0) {
+        bookErr.value = 'Selected book has an invalid id.'
+        return
+      }
     } else {
       // From Open Library — save to DB first to get a real ID
       const saved = await booksService.saveFromCatalog(chosenBook.value)
-      bookId = saved.bId  // adjust to match your BookDto field name
+
+      // backend returns bId; your frontend model prefers id
+      const savedId = saved.id
+
+      if (!Number.isFinite(savedId) || savedId <= 0) {
+        throw new Error('Book save did not return a valid id.')
+      }
+
+      bookId = savedId
     }
 
     await groupsService.addBook(groupId.value, bookId)
@@ -312,6 +323,26 @@ async function saveGroupBook() {
     console.error(e)
   } finally {
     bookSaving.value = false
+  }
+}
+
+async function removeGroupBook(gbId: number) {
+  if (!canManage.value) return
+
+  booksError.value = ''
+  loadingBooks.value = true
+  try {
+    await groupsService.removeBook(groupId.value, gbId)
+    groupBooks.value = await groupsService.getGroupBooks(groupId.value)
+  } catch (e: any) {
+    const data = e?.response?.data
+    booksError.value =
+      (typeof data === 'string' ? data : data?.message) ??
+      e?.message ??
+      'Could not remove book.'
+    console.error(e)
+  } finally {
+    loadingBooks.value = false
   }
 }
 
@@ -345,6 +376,16 @@ const upcomingMeetings = computed<GroupScheduleDto[]>(() => {
   return items.filter(s => (s.dateTime ? Date.parse(String(s.dateTime)) : 0) >= now).slice(0, 6)
 })
 
+type MeetingBookOption = { title: string; value: number }
+
+const meetingBookOptions = computed<MeetingBookOption[]>(() =>
+  books.value
+    .filter(b => Number.isFinite(Number(b.id)) && Number(b.id) > 0)
+    .map(b => ({
+      title: String(b.title ?? `Book ${b.id}`),
+      value: Number(b.id),
+    }))
+)
 // ─────────────────────────────────────────────────────────────
 // Meeting dialog state (same as yours)
 // ─────────────────────────────────────────────────────────────
