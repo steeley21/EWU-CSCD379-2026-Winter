@@ -59,31 +59,50 @@
           Add Book to Group
         </v-card-title>
 
-        <v-card-text>
-          <v-select
-            v-model="selectedBookId"
-            :items="availableBooks"
-            item-title="title"
-            item-value="id"
-            label="Select a book"
-            variant="outlined"
-            density="comfortable"
-            :loading="allBooksLoading"
-          />
+    <v-card-text>
+      <v-text-field
+        v-model="bookSearch"
+        label="Search for a book..."
+        variant="outlined"
+        density="comfortable"
+        clearable
+        :loading="allBooksLoading"
+        @update:model-value="onBookSearch"
+        @click:clear="searchResults = []"
+      />
 
-          <v-alert v-if="bookErr" type="error" variant="tonal" class="mt-2">
-            {{ bookErr }}
-          </v-alert>
+      <!-- Search results list -->
+      <v-list v-if="searchResults.length && !chosenBook" lines="two" class="rounded border mb-2">
+        <v-list-item
+          v-for="book in searchResults"
+          :key="book.isbn ?? book.title"
+          :title="book.title"
+          :subtitle="`${book.authorFirst} ${book.authorLast}${book.publishYear ? ' · ' + book.publishYear : ''}`"
+          @click="selectBook(book)"
+        >
+          <template #append>
+            <v-icon :color="book.source === 'db' ? 'success' : 'grey'">
+              {{ book.source === 'db' ? 'mdi-database-check' : 'mdi-cloud-search' }}
+            </v-icon>
+          </template>
+        </v-list-item>
+      </v-list>
 
-          <v-alert
-            v-else-if="!allBooksLoading && availableBooks.length === 0"
-            type="info"
-            variant="tonal"
-            class="mt-2"
-          >
-            No available books to add (all books are already in this group).
-          </v-alert>
-        </v-card-text>
+      <!-- Chosen book chip -->
+      <v-chip
+        v-if="chosenBook"
+        class="mt-1 mb-2"
+        color="primary"
+        closable
+        @click:close="chosenBook = null; bookSearch = ''"
+      >
+        {{ chosenBook.title }} — {{ chosenBook.authorFirst }} {{ chosenBook.authorLast }}
+      </v-chip>
+
+      <v-alert v-if="bookErr" type="error" variant="tonal" class="mt-2">
+        {{ bookErr }}
+      </v-alert>
+    </v-card-text>
 
         <v-card-actions>
           <v-spacer />
@@ -91,7 +110,7 @@
           <v-btn
             color="primary"
             :loading="bookSaving"
-            :disabled="availableBooks.length === 0 || selectedBookId == null"
+            :disabled="!chosenBook"
             @click="saveGroupBook"
           >
             Add
@@ -215,73 +234,86 @@ const currentBook = computed<BookDto | null>(() => books.value[0] ?? null)
 // Add Book dialog state
 // ─────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────
+// Add Book dialog state
+// ─────────────────────────────────────────────────────────────
+
+import type { BookSearchResult } from '~/services/booksService'
+
 const bookDialog = ref(false)
-const selectedBookId = ref<number | null>(null)
-const allBooks = ref<BookDto[]>([])
+const bookSearch = ref('')
+const searchResults = ref<BookSearchResult[]>([])
+const chosenBook = ref<BookSearchResult | null>(null)
 const allBooksLoading = ref(false)
 const bookSaving = ref(false)
 const bookErr = ref('')
 
-function normalizeCatalogBook(raw: any): BookDto | null {
-  const id = Number(raw?.id ?? raw?.bId ?? raw?.BId)
-  if (!Number.isFinite(id) || id <= 0) return null
+let searchTimer: ReturnType<typeof setTimeout>
 
-  const title = String(raw?.title ?? raw?.Title ?? '').trim() || `Book ${id}`
+function onBookSearch(val: string) {
+  clearTimeout(searchTimer)
+  searchResults.value = []
+  if (!val || val.length < 2) return
 
-  const authorFirst = String(raw?.authorFirst ?? raw?.AuthorFirst ?? '').trim()
-  const authorLast = String(raw?.authorLast ?? raw?.AuthorLast ?? '').trim()
-  const authorCombined = `${authorFirst} ${authorLast}`.trim()
-
-  const author = String(raw?.author ?? raw?.Author ?? authorCombined).trim() || 'Unknown author'
-
-  return { id, title, author, ...raw }
+  searchTimer = setTimeout(async () => {
+    allBooksLoading.value = true
+    try {
+      searchResults.value = await booksService.search(val)
+    } catch (e: any) {
+      bookErr.value = e?.message ?? 'Search failed.'
+    } finally {
+      allBooksLoading.value = false
+    }
+  }, 350)
 }
 
-const availableBooks = computed<BookDto[]>(() => {
-  const inGroup = new Set(groupBooks.value.map(gb => gb.book.id))
-  return allBooks.value.filter(b => !inGroup.has(b.id))
-})
+function selectBook(book: BookSearchResult) {
+  chosenBook.value = book
+  searchResults.value = []
+  bookSearch.value = ''
+}
 
-const meetingBookOptions = computed(() =>
-  books.value.map(b => ({
-    value: Number((b as any).id ?? (b as any).bId ?? (b as any).BId),
-    title: String((b as any).title ?? (b as any).Title ?? 'Untitled'),
-  })).filter(x => Number.isFinite(x.value) && x.value > 0)
-)
-
-async function openAddBook() {
+function openAddBook() {
   if (!canManage.value) return
   bookErr.value = ''
-  selectedBookId.value = null
+  bookSearch.value = ''
+  searchResults.value = []
+  chosenBook.value = null
   bookDialog.value = true
-
-  if (allBooks.value.length) return
-
-  allBooksLoading.value = true
-  try {
-    const raw = await booksService.getAll()
-    const norm = (raw as any[]).map(normalizeCatalogBook).filter((b): b is BookDto => !!b)
-    allBooks.value = norm
-  } catch (e: any) {
-    bookErr.value = e?.message ?? 'Could not load books catalog.'
-    console.error(e)
-  } finally {
-    allBooksLoading.value = false
-  }
 }
 
 async function saveGroupBook() {
   bookErr.value = ''
-  if (selectedBookId.value == null) {
-    bookErr.value = 'Please choose a book.'
-    return
-  }
+  if (!chosenBook.value) { bookErr.value = 'Please select a book.'; return }
 
   bookSaving.value = true
   try {
-    await groupsService.addBook(groupId.value, selectedBookId.value)
+    let bookId: number
+
+    if (chosenBook.value.source === 'db' && chosenBook.value.id != null) {
+      bookId = Number(chosenBook.value.id)
+      if (!Number.isFinite(bookId) || bookId <= 0) {
+        bookErr.value = 'Selected book has an invalid id.'
+        return
+      }
+    } else {
+      // From Open Library — save to DB first to get a real ID
+      const saved = await booksService.saveFromCatalog(chosenBook.value)
+
+      // backend returns bId; your frontend model prefers id
+      const savedId = saved.id
+
+      if (!Number.isFinite(savedId) || savedId <= 0) {
+        throw new Error('Book save did not return a valid id.')
+      }
+
+      bookId = savedId
+    }
+
+    await groupsService.addBook(groupId.value, bookId)
     groupBooks.value = await groupsService.getGroupBooks(groupId.value)
     bookDialog.value = false
+    chosenBook.value = null
   } catch (e: any) {
     const data = e?.response?.data
     bookErr.value =
@@ -296,12 +328,21 @@ async function saveGroupBook() {
 
 async function removeGroupBook(gbId: number) {
   if (!canManage.value) return
+
+  booksError.value = ''
+  loadingBooks.value = true
   try {
     await groupsService.removeBook(groupId.value, gbId)
     groupBooks.value = await groupsService.getGroupBooks(groupId.value)
-  } catch (e) {
-    booksError.value = 'Could not remove book.'
+  } catch (e: any) {
+    const data = e?.response?.data
+    booksError.value =
+      (typeof data === 'string' ? data : data?.message) ??
+      e?.message ??
+      'Could not remove book.'
     console.error(e)
+  } finally {
+    loadingBooks.value = false
   }
 }
 
@@ -335,6 +376,16 @@ const upcomingMeetings = computed<GroupScheduleDto[]>(() => {
   return items.filter(s => (s.dateTime ? Date.parse(String(s.dateTime)) : 0) >= now).slice(0, 6)
 })
 
+type MeetingBookOption = { title: string; value: number }
+
+const meetingBookOptions = computed<MeetingBookOption[]>(() =>
+  books.value
+    .filter(b => Number.isFinite(Number(b.id)) && Number(b.id) > 0)
+    .map(b => ({
+      title: String(b.title ?? `Book ${b.id}`),
+      value: Number(b.id),
+    }))
+)
 // ─────────────────────────────────────────────────────────────
 // Meeting dialog state (same as yours)
 // ─────────────────────────────────────────────────────────────

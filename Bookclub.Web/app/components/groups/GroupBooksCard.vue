@@ -21,16 +21,37 @@
 
       <div v-else class="gp-books">
         <div v-for="gb in preview" :key="gb.gbId" class="gp-book-row">
-          <div class="gp-book-title">{{ String(gb.book.title ?? 'Untitled') }}</div>
-          <div class="gp-muted gp-small">{{ String(gb.book.author ?? 'Unknown author') }}</div>
+          <div class="gp-book-left">
+            <div class="gp-cover">
+              <v-img
+                v-if="coverUrl(gb.book)"
+                :src="coverUrl(gb.book)!"
+                width="44"
+                height="66"
+                cover
+                class="rounded"
+                :alt="String(gb.book.title ?? 'Book cover')"
+              >
+                <template #error>
+                  <div class="gp-cover-placeholder">
+                    <v-icon icon="mdi-book-open-page-variant" size="18" />
+                  </div>
+                </template>
+              </v-img>
+
+              <div v-else class="gp-cover-placeholder">
+                <v-icon icon="mdi-book-open-page-variant" size="18" />
+              </div>
+            </div>
+
+            <div class="gp-meta">
+              <div class="gp-book-title">{{ String(gb.book.title ?? 'Untitled') }}</div>
+              <div class="gp-muted gp-small">{{ authorLabel(gb.book) }}</div>
+            </div>
+          </div>
 
           <div class="gp-row-actions" v-if="canManage">
-            <button
-              class="gp-btn-ghost"
-              type="button"
-              @click="$emit('remove', gb.gbId)"
-              title="Remove from group"
-            >
+            <button class="gp-btn-ghost" type="button" @click="$emit('remove', gb.gbId)">
               Remove
             </button>
           </div>
@@ -58,6 +79,25 @@ const props = defineProps<{
   loading: boolean
   error: string
 }>()
+
+function authorLabel(b: any): string {
+  const a = String(b?.author ?? '').trim()
+  if (a) return a
+  const combined = `${String(b?.authorFirst ?? '').trim()} ${String(b?.authorLast ?? '').trim()}`.trim()
+  return combined || 'Unknown author'
+}
+
+function coverUrl(b: any): string | null {
+  const raw = String(b?.isbn ?? b?.ISBN ?? '').trim()
+  if (!raw) return null
+
+  // ISBN sometimes comes as "978..." or "978...; 123..." or with spaces
+  const isbn = raw.split(/[,\s;]/).find(x => x && x.length >= 10) ?? ''
+  if (!isbn) return null
+
+  // OpenLibrary Covers API
+  return `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(isbn)}-M.jpg`
+}
 
 const preview = computed(() => props.groupBooks.slice(0, 4))
 </script>
@@ -149,4 +189,30 @@ const preview = computed(() => props.groupBooks.slice(0, 4))
   border-radius:14px;
   padding:0.75rem 0.9rem;
 }
+
+.gp-book-left{
+  display:flex;
+  gap:0.9rem;
+  align-items:flex-start;
+}
+
+.gp-cover{
+  width:44px;
+  height:66px;
+  flex:0 0 auto;
+}
+
+.gp-cover-placeholder{
+  width:44px;
+  height:66px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color: var(--text-muted);
+  background: rgba(220, 201, 182, 0.12);
+}
+
+.gp-meta{ flex: 1 1 auto; min-width: 0; }
 </style>

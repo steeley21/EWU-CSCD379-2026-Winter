@@ -88,10 +88,7 @@ function normalizeMember(raw: AnyRec): GroupMemberDto | null {
 function normalizeBook(raw: AnyRec): BookDto | null {
   const b = (raw.book ?? raw.Book ?? raw) as AnyRec
 
-  const id = toNumber(
-    b.id ?? b.bookId ?? b.BookId ??
-    b.bId ?? b.BId ?? b.bid ?? b.BID ?? b.bID
-  )
+  const id = toNumber(b.id ?? b.bookId ?? b.BookId ?? b.bId ?? b.BId ?? b.BID)
   if (!id) return null
 
   const title = toStr(b.title ?? b.Title).trim()
@@ -101,30 +98,30 @@ function normalizeBook(raw: AnyRec): BookDto | null {
   const authorCombined = `${authorFirst} ${authorLast}`.trim()
 
   return {
+    ...b,
     id,
     title: title || `Book ${id}`,
     author: toStr(b.author ?? b.Author).trim() || authorCombined || 'Unknown author',
-    description: b.description ?? b.Description,
-    createdAt: b.createdAt ?? b.CreatedAt,
-    ...b,
+    isbn: (b.isbn ?? b.ISBN ?? null),
   }
 }
 
 
 function normalizeGroupBook(raw: AnyRec): GroupBookDto | null {
-  // API: GroupBookDto(GBID, GroupID, Book) — may serialize as gbid/groupID/book
-  const gbId = toNumber(
-    raw.gbId ?? raw.gbid ?? raw.GBID ?? raw.GBid ?? raw.gBID ?? raw.id ?? raw.Id
-  )
-  const groupId = toNumber(
-    raw.groupId ?? raw.groupID ?? raw.GroupID ?? raw.GroupId
-  )
+  const gbId = toNumber(raw.gbId ?? raw.gbid ?? raw.GBID ?? raw.id ?? raw.Id)
+  const groupId = toNumber(raw.groupId ?? raw.groupID ?? raw.GroupID ?? raw.GroupId)
 
   const bookRaw = raw.book ?? raw.Book
   const book = bookRaw ? normalizeBook(bookRaw) : null
 
   if (!gbId || !groupId || !book) return null
-  return { gbId, groupId, book, ...raw }
+
+  return {
+    ...raw,
+    gbId,
+    groupId,
+    book, 
+  }
 }
 
 function normalizeSchedule(raw: AnyRec): GroupScheduleDto | null {
@@ -144,13 +141,13 @@ function normalizeSchedule(raw: AnyRec): GroupScheduleDto | null {
   if (!gsId || !groupId || !book || !dateTime) return null
 
   return {
+    ...raw,
     gsId,
     groupId,
     book,
     dateTime,
     duration,
     location: location ?? null,
-    ...raw,
   }
 }
 

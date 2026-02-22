@@ -35,3 +35,30 @@ public record CreateGroupScheduleDto(
     [Range(1, 1440)] int Duration,
     string? Location
 );
+
+// ── Book Search Result ─────────────────────────────────────────────────────────
+public record BookSearchResultDto(
+    int? Id,               // null when from OpenLibrary
+    string Title,
+    string AuthorFirst,
+    string AuthorLast,
+    string? Isbn,
+    int? PublishYear,
+    string Source          // "db" | "openlibrary"
+);
+
+public record SaveFromCatalogDto(
+    [Required] string Title,
+    [Required] string AuthorFirst,
+    [Required] string AuthorLast,
+    string? Isbn,
+    int? PublishYear
+);
+
+// ── Backfill ISBN Result ─────────────────────────────────────────────────────
+public record BackfillIsbnResultDto(
+    int Checked,
+    int Updated,
+    int Skipped,
+    int Failed
+);
