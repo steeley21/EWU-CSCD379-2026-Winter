@@ -82,7 +82,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowNuxt", policy =>
         policy
-            .WithOrigins("http://localhost:3000", "https://localhost:3000")
+            .WithOrigins("http://localhost:3000", 
+            "https://localhost:3000",
+            "https://ambitious-forest-0b7132c0f.2.azurestaticapps.net/"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());
