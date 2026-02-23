@@ -27,6 +27,12 @@ export type BookDto = {
   author?: string
   description?: string
   createdAt?: string
+
+  authorFirst?: string
+  authorLast?: string
+  publishDate?: string
+  isbn?: string
+
   [k: string]: unknown
 }
 

@@ -17,6 +17,7 @@
       <!-- Nav links -->
       <nav class="navbar-nav" aria-label="Main navigation">
         <NuxtLink to="/" class="nav-link">Home</NuxtLink>
+        <NuxtLink to="/preview/books" class="nav-link">Browse</NuxtLink>
         <NuxtLink v-if="isAuthenticated" to="/dashboard" class="nav-link">Dashboard</NuxtLink>
         <NuxtLink v-if="isAuthenticated && isAdmin" to="/admin" class="nav-link nav-link--admin">
           Admin

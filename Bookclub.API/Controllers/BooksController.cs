@@ -34,8 +34,8 @@ public class BooksController : ControllerBase
         return Ok(books);
     }
 
-    // ✅ IMPORTANT: This prevents /api/Books/search from accidentally binding to {id}
     [HttpGet("search")]
+    [AllowAnonymous]
     public async Task<IActionResult> Search([FromQuery] string q)
     {
         q = (q ?? "").Trim();
@@ -214,6 +214,7 @@ public class BooksController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetById(int id)
     {
         var b = await _db.Books.FindAsync(id);

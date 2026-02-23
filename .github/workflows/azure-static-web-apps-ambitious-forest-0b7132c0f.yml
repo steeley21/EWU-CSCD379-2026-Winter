@@ -23,12 +23,19 @@ jobs:
           cache: npm
           cache-dependency-path: Bookclub.Web/package-lock.json
 
-      - name: Install + Generate
+      - name: Install
+        working-directory: Bookclub.Web
+        run: npm ci
+
+      - name: Run unit tests (Vitest)
+        working-directory: Bookclub.Web
+        run: npm run test:ci
+
+      - name: Generate
         working-directory: Bookclub.Web
         env:
           NUXT_PUBLIC_API_BASE: https://book-club-api-frh4f4akd7eubkhu.eastus-01.azurewebsites.net
         run: |
-          npm ci
           npm run generate
           cp public/staticwebapp.config.json .output/public/staticwebapp.config.json
 
@@ -39,5 +46,4 @@ jobs:
         env:
           SWA_CLI_DEPLOYMENT_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_FOREST_0B7132C0F }}
         run: |
-
           npx -y @azure/static-web-apps-cli@2.0.2 deploy .output/public --env production

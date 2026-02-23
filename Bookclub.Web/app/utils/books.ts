@@ -29,3 +29,13 @@ export function publishDateLabel(book: any): string {
   if (!Number.isFinite(t)) return String(raw)
   return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(t))
 }
+
+export function publishYearLabel(book: any): string | null {
+  const raw = book?.publishDate ?? book?.PublishDate
+  if (!raw) return null
+
+  const t = Date.parse(String(raw))
+  if (!Number.isFinite(t)) return null
+
+  return String(new Date(t).getFullYear())
+}

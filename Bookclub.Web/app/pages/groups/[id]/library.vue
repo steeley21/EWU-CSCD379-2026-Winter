@@ -17,7 +17,7 @@
 
     <v-row class="gp-row" dense>
       <v-col cols="12">
-        <v-card class="bc-card" rounded="lg">
+        <v-card class="bc-card lib-shell" rounded="lg">
           <div class="lib-head">
             <div>
               <div class="lib-title">
@@ -50,24 +50,24 @@
                 <v-card class="bc-card lib-card" rounded="lg" @click="openBook(b)">
                   <div class="lib-card-inner">
                     <div class="lib-cover">
-                      <v-img
-                        v-if="coverUrl(b)"
-                        :src="coverUrl(b)!"
-                        height="170"
-                        cover
-                        class="rounded"
-                        :alt="String(b.title ?? 'Book cover')"
-                      >
-                        <template #error>
-                          <div class="lib-cover-placeholder">
-                            <v-icon icon="mdi-book-open-page-variant" size="18" />
-                          </div>
-                        </template>
-                      </v-img>
+                      <v-responsive :aspect-ratio="2 / 3" class="lib-cover-frame rounded">
+                        <v-img
+                          v-if="coverUrl(b)"
+                          :src="coverUrl(b)!"
+                          class="lib-cover-img"
+                          :alt="String(b.title ?? 'Book cover')"
+                        >
+                          <template #error>
+                            <div class="lib-cover-placeholder">
+                              <v-icon icon="mdi-book-open-page-variant" size="18" />
+                            </div>
+                          </template>
+                        </v-img>
 
-                      <div v-else class="lib-cover-placeholder">
-                        <v-icon icon="mdi-book-open-page-variant" size="18" />
-                      </div>
+                        <div v-else class="lib-cover-placeholder">
+                          <v-icon icon="mdi-book-open-page-variant" size="18" />
+                        </div>
+                      </v-responsive>
                     </div>
 
                     <div class="lib-meta">
@@ -94,23 +94,24 @@
           <v-row>
             <v-col cols="12" sm="4">
               <div class="lib-modal-cover">
-                <v-img
-                  v-if="selectedBook && coverUrl(selectedBook)"
-                  :src="coverUrl(selectedBook)!"
-                  height="240"
-                  cover
-                  class="rounded"
-                >
-                  <template #error>
-                    <div class="lib-cover-placeholder lib-cover-placeholder-lg">
-                      <v-icon icon="mdi-book-open-page-variant" size="22" />
-                    </div>
-                  </template>
-                </v-img>
+                <v-responsive :aspect-ratio="2 / 3" class="lib-modal-frame rounded">
+                  <v-img
+                    v-if="selectedBook && coverUrl(selectedBook)"
+                    :src="coverUrl(selectedBook)!"
+                    class="lib-modal-img"
+                    :alt="String(selectedBook?.title ?? 'Book cover')"
+                  >
+                    <template #error>
+                      <div class="lib-cover-placeholder">
+                        <v-icon icon="mdi-book-open-page-variant" size="22" />
+                      </div>
+                    </template>
+                  </v-img>
 
-                <div v-else class="lib-cover-placeholder lib-cover-placeholder-lg">
-                  <v-icon icon="mdi-book-open-page-variant" size="22" />
-                </div>
+                  <div v-else class="lib-cover-placeholder">
+                    <v-icon icon="mdi-book-open-page-variant" size="22" />
+                  </div>
+                </v-responsive>
               </div>
             </v-col>
 
@@ -168,9 +169,10 @@
 
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/authStore'
-import { groupsService } from '~/services/groupsService'
-import type { BookDto, GroupBookDto, GroupScheduleDto, GroupSummaryDto } from '~/types/dtos'
-import { authorLabel, coverUrl, extractIsbn, publishDateLabel } from '~/utils/books'
+import type { BookDto } from '~/types/dtos'
+import { authorLabel, coverUrl, publishDateLabel } from '~/utils/books'
+import { useGroupLibraryData } from '~/composables/useGroupLibraryData'
+import { useOpenLibraryDescription } from '~/composables/useOpenLibraryDescription'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -179,186 +181,39 @@ const route = useRoute()
 
 const groupId = computed(() => Number(route.params.id))
 
-const group = ref<GroupSummaryDto | null>(null)
-const groupBooks = ref<GroupBookDto[]>([])
-const schedule = ref<GroupScheduleDto[]>([])
+const { group, books, loading, pageError, scheduledDates, loadAll } = useGroupLibraryData()
 
-const loading = ref(true)
-const pageError = ref('')
-
-
-// derived
-const books = computed<BookDto[]>(() => groupBooks.value.map(gb => gb.book))
-
-// schedule index: bookId -> array of ISO strings
-const scheduleByBookId = computed<Map<number, string[]>>(() => {
-    const m = new Map<number, string[]>()
-    for (const s of schedule.value) {
-        const bid = Number((s.book as any)?.id)
-        if (!Number.isFinite(bid) || bid <= 0) continue
-        const dt = String((s as any).dateTime ?? '')
-        if (!dt) continue
-        const arr = m.get(bid) ?? []
-    arr.push(dt)
-    m.set(bid, arr)
-}
-// sort each array ascending
-for (const [k, arr] of m.entries()) {
-    arr.sort((a, b) => Date.parse(a) - Date.parse(b))
-    m.set(k, arr)
-}
-return m
-})
-
-function scheduledDates(bookId: number): string[] {
-    return scheduleByBookId.value.get(Number(bookId)) ?? []
-}
-
-function lastScheduledLabel(bookId: number): string | null {
-    const dates = scheduledDates(bookId)
-    if (!dates.length) return null
-    return formatDateTime(dates[dates.length - 1]!)
-}
-
-function formatDateTime(iso: string): string {
-    const t = Date.parse(String(iso))
-    if (!Number.isFinite(t)) return String(iso)
-    return new Intl.DateTimeFormat(undefined, {
-weekday: 'short',
-month: 'short',
-day: 'numeric',
-year: 'numeric',
-hour: 'numeric',
-minute: '2-digit',
-}).format(new Date(t))
-}
-
-// ─────────────────────────────────────────────────────────────
-// Details modal + OpenLibrary description
-// ─────────────────────────────────────────────────────────────
-
-let descRequestId = 0
+// dialog state
 const detailsOpen = ref(false)
 const selectedBook = ref<BookDto | null>(null)
-const description = ref<string>('')
-const descLoading = ref(false)
 
-// simple in-memory cache (isbn -> description)
-const descCache = new Map<string, string>()
+// OpenLibrary description (shared)
+const { description, loading: descLoading, reset: resetDesc, loadForBook } = useOpenLibraryDescription()
 
 async function openBook(b: BookDto) {
   selectedBook.value = b
   detailsOpen.value = true
-  description.value = ''
-  await loadDescription(b)
+  resetDesc()
+  await loadForBook(b)
 }
 
-async function loadDescription(b: BookDto) {
-  const isbn = extractIsbn(b)
-  if (!isbn) return
-
-  // bump request id so stale responses can't overwrite
-  const reqId = ++descRequestId
-
-  if (descCache.has(isbn)) {
-    description.value = descCache.get(isbn) ?? ''
-    return
-  }
-
-  descLoading.value = true
-  try {
-    const isbnData: any = await fetch(`https://openlibrary.org/isbn/${encodeURIComponent(isbn)}.json`).then(r => {
-      if (!r.ok) throw new Error('isbn lookup failed')
-      return r.json()
-    })
-
-    if (reqId !== descRequestId) return // stale click
-
-    const directDesc = isbnData?.description
-    const directText =
-      typeof directDesc === 'string'
-        ? directDesc
-        : (directDesc && typeof directDesc === 'object' && typeof directDesc.value === 'string')
-          ? directDesc.value
-          : ''
-
-    if (directText) {
-      descCache.set(isbn, directText)
-      description.value = directText
-      return
-    }
-
-    const workKey = Array.isArray(isbnData?.works) ? isbnData.works?.[0]?.key : null
-    if (!workKey) return
-
-    const workData: any = await fetch(`https://openlibrary.org${workKey}.json`).then(r => {
-      if (!r.ok) throw new Error('work lookup failed')
-      return r.json()
-    })
-
-    if (reqId !== descRequestId) return // stale click
-
-    const workDesc = workData?.description
-    const text =
-      typeof workDesc === 'string'
-        ? workDesc
-        : (workDesc && typeof workDesc === 'object' && typeof workDesc.value === 'string')
-          ? workDesc.value
-          : ''
-
-    if (text) {
-      descCache.set(isbn, text)
-      description.value = text
-    }
-  } catch {
-    // best-effort; leave empty
-  } finally {
-    if (reqId === descRequestId) descLoading.value = false
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Load
-// ─────────────────────────────────────────────────────────────
-
-async function loadAll(id: number) {
-  loading.value = true
-  pageError.value = ''
-
-  try {
-    const g = await groupsService.getById(id)
-    if (!g) {
-      group.value = null
-      pageError.value = 'Group not found.'
-      return
-    }
-    group.value = g
-  } catch {
-    pageError.value = 'Could not load group.'
-  }
-
-  const results = await Promise.allSettled([
-    groupsService.getGroupBooks(id),
-    groupsService.getSchedule(id),
-  ])
-
-  if (results[0].status === 'fulfilled') groupBooks.value = results[0].value
-  else pageError.value = pageError.value || 'Could not load group books.'
-
-  if (results[1].status === 'fulfilled') schedule.value = results[1].value
-  // schedule failure isn't fatal for library page
-
-  loading.value = false
+function formatDateTime(iso: string): string {
+  const t = Date.parse(String(iso))
+  if (!Number.isFinite(t)) return String(iso)
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(t))
 }
 
 onMounted(async () => {
   auth.hydrate()
   const id = Number(route.params.id)
-  if (!Number.isFinite(id) || id <= 0) {
-    pageError.value = 'Invalid group id.'
-    loading.value = false
-    return
-  }
+  if (!Number.isFinite(id) || id <= 0) return
   await loadAll(id)
 })
 
@@ -401,34 +256,54 @@ watch(() => route.params.id, async () => {
   height: 100%;
 }
 
-/* Fixed cover region height so all cards align */
+/* Cover area uses aspect-ratio frame so no cropping */
 .lib-cover{
   padding: 0.9rem 0.9rem 0.25rem;
-  height: 190px;
   display:flex;
 }
 
-/* Ensure Vuetify v-img fills the cover area */
-.lib-cover :deep(.v-img){
+.lib-cover-frame{
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: rgba(220, 201, 182, 0.12);
+}
+
+.lib-cover-img{
   width: 100%;
   height: 100%;
 }
 
-/* Placeholder matches fixed cover height */
+/* ✅ Key fix: do not crop/zoom */
+.lib-cover-img :deep(.v-img__img){
+  object-fit: contain;
+}
+
 .lib-cover-placeholder{
   width: 100%;
   height: 100%;
   border-radius: 12px;
-  border: 1px solid var(--border);
   display:flex;
   align-items:center;
   justify-content:center;
   color: var(--text-muted);
+}
+
+/* Modal frame */
+.lib-modal-frame{
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
   background: rgba(220, 201, 182, 0.12);
 }
 
-.lib-cover-placeholder-lg{
-  height:240px;
+.lib-modal-img{
+  width: 100%;
+  height: 100%;
+}
+
+.lib-modal-img :deep(.v-img__img){
+  object-fit: contain;
 }
 
 /* Meta area: keep consistent height */
@@ -534,6 +409,16 @@ watch(() => route.params.id, async () => {
   white-space: pre-wrap;
   color: var(--text-base);
   line-height: 1.55;
+}
+
+/* Don't let the big container card "lift" on hover */
+.lib-shell {
+  transform: none !important;
+}
+
+/* bc-card likely applies hover transform globally; override it here */
+.lib-shell:hover {
+  transform: none !important;
 }
 </style>
 

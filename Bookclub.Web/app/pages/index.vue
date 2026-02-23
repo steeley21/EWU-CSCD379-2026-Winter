@@ -39,11 +39,13 @@
             Go to Dashboard →
           </v-btn>
 
-          <a
+          <NuxtLink
             v-if="!auth.isAuthenticated"
-            href="#featured"
+            to="/preview/books"
             class="cta-secondary"
-          >Browse books first</a>
+          >
+            Browse books first
+          </NuxtLink>
         </div>
       </div>
 
