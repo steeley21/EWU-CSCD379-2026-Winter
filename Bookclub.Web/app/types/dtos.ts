@@ -87,3 +87,19 @@ export interface GroupInviteDto {
     adminFullName: string
     memberCount: number
 }
+
+export type CreateAdminUserRequestDto = {
+  email: string
+  username: string
+  fname: string
+  lname: string
+  password: string
+}
+
+export type AdminUserDto = {
+  userId: string
+  email: string
+  username: string
+  fullName: string
+  roles: string[]
+}

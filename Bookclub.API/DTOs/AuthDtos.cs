@@ -22,3 +22,19 @@ public record AuthResponseDto(
     string Username,
     IList<string> Roles
 );
+
+public record CreateAdminUserDto(
+    [Required, EmailAddress] string Email,
+    [Required] string Username,
+    [Required] string FName,
+    [Required] string LName,
+    [Required] string Password
+);
+
+public record AdminUserDto(
+    string UserId,
+    string Email,
+    string Username,
+    string FullName,
+    string[] Roles
+);
