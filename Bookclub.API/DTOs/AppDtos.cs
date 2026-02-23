@@ -29,6 +29,11 @@ public record UserGroupDto(int UGID, string UserID, string FullName, string User
 // ── GroupSchedule ─────────────────────────────────────────────────────────────
 public record GroupScheduleDto(int GSID, int GroupID, BookDto Book, DateTime DateTime, int Duration, string? Location);
 
+// ── Invites ───────────────────────────────────────────────────────────────────
+public record InviteMemberDto([Required][EmailAddress] string Email);
+
+public record GroupInviteDto(int UGID, int GroupID, string GroupName, string AdminFullName, int MemberCount);
+
 public record CreateGroupScheduleDto(
     [Required] int BId,
     [Required] DateTime DateTime,

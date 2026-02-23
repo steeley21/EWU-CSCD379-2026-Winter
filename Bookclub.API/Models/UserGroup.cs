@@ -1,8 +1,9 @@
-using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BookClubApp.Models;
+
+public enum UserGroupStatus { Accepted, Pending, Declined }
 
 public class UserGroup
 {
@@ -11,8 +12,10 @@ public class UserGroup
 
     [Required]
     public string UserID { get; set; } = string.Empty;
-    
+
     public int GroupID { get; set; }
+
+    public UserGroupStatus Status { get; set; } = UserGroupStatus.Accepted;
 
     [ForeignKey("UserID")]
     public ApplicationUser User { get; set; } = null!;
