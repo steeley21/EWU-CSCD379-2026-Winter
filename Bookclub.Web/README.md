@@ -1,22 +1,22 @@
 # BookClub App — Frontend (Bookclub.Web)
 
-Nuxt 3 + Vuetify 3 + TypeScript frontend for the BookClub line-of-business application.
+Nuxt + Vuetify + TypeScript frontend for the BookClub line-of-business application.
 
 **Live site:** https://ambitious-forest-0b7132c0f.2.azurestaticapps.net/
 
-> If the live site shows API errors, confirm the **API is running locally** (dev) or that the deployed site has the correct `NUXT_PUBLIC_API_BASE` configured in Azure Static Web Apps settings.
+> If the live site shows API errors, confirm the deployed site has the correct `NUXT_PUBLIC_API_BASE` configured in Azure Static Web Apps settings (or that your local API is running for local dev).
 
 ---
 
 ## Tech Stack
-- **Nuxt 3**
+- **Nuxt** (static generate for Azure Static Web Apps)
 - **Vue 3 + Vuetify 3**
 - **TypeScript**
 - **Axios services** (see `/app/services`)
 - **Pinia store** for auth (`/app/stores/authStore.ts`)
 - **Route middleware** for auth/role gating (see `/app/middleware`)
 - **Azure Static Web Apps** (static hosting / static generate)
-- **Vitest:** not added yet (required for Assignment 4 service tests)
+- **Vitest** (unit tests for services + composables)
 
 ---
 
@@ -59,6 +59,14 @@ dotnet run --launch-profile https
 - `/` (Landing page)
   - Shows “Featured Books” pulled from the API  
   - **Requires API `GET /api/Books` to be public** (`[AllowAnonymous]`)
+- `/preview/books` (**Book Preview**)
+  - Public browse page showing books from the DB (no login)
+  - Search + sort (client-side) powered by `useBooksPreview()`
+  - Cards link to `/preview/books/:id`
+  - **Requires API `GET /api/Books` to be public**
+- `/preview/books/:id` (**Book Preview Detail**)
+  - Public detail page for a DB book
+  - **Requires API `GET /api/Books/{id}` to be public** (`[AllowAnonymous]`)
 
 ### Auth Required
 - `/login`
@@ -120,17 +128,48 @@ Frontend recognizes:
 - Clicking a book opens a details modal:
   - Cover, author, publish date
   - Meeting dates for that book (derived from `GET /api/Groups/{id}/schedule`)
-  - Description fetched **live from OpenLibrary** (client-side):
-    - `https://openlibrary.org/isbn/{isbn}.json`
-    - then (if needed) `https://openlibrary.org{workKey}.json`
-  - Uses a small in-memory cache so the same ISBN isn’t fetched repeatedly.
+  - Description fetched **live from OpenLibrary** (client-side) via shared composable:
+    - `useOpenLibraryDescription()` (includes a small in-memory cache by ISBN)
 
 ---
 
-## Book Covers (thumbnails)
-- Covers are displayed using **OpenLibrary Covers API** (client-side) using the book ISBN:
+## Book Covers + Descriptions (OpenLibrary)
+
+### Covers (thumbnails)
+- Covers are displayed using the **OpenLibrary Covers API** (client-side) using the book ISBN:
   - `https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg?default=false`
 - `default=false` forces a **404 for missing covers**, so the UI can reliably show the placeholder.
+- Cover rendering is standardized through `BookCover.vue`:
+  - consistent **2:3 aspect ratio**
+  - `object-fit: contain` (prevents cropping/zoom)
+
+### Descriptions (detail text)
+- Descriptions are fetched client-side from OpenLibrary:
+  - `https://openlibrary.org/isbn/{isbn}.json`
+  - then (if needed) `https://openlibrary.org{workKey}.json`
+- Shared logic lives in `useOpenLibraryDescription()` so both:
+  - Group Library modal, and
+  - Preview Book Detail page  
+  use the same behavior + cache.
+
+---
+
+## Testing (Vitest)
+
+From `Bookclub.Web/`:
+
+```bash
+npm run test       # one-time run
+npm run test:watch # watch mode
+npm run test:ci    # CI run (same as test)
+```
+
+Test locations follow the “tests live next to code” pattern:
+- `app/services/__tests__/...`
+- `app/composables/__tests__/...`
+- `app/utils/__tests__/...`
+
+CI: GitHub Actions runs `npm run test:ci` before `npm run generate` so failing tests block deploy.
 
 ---
 
@@ -160,11 +199,17 @@ Bookclub.Web/
 ├── app/
 │   ├── assets/                 # global/theme CSS
 │   ├── components/
-│   │   ├── common/             # reusable components
+│   │   ├── common/             # reusable components (NavBar, BookCard, BookCover, etc.)
 │   │   └── groups/             # group UI cards (Members, Books, Schedule)
+│   ├── composables/            # shared page logic (preview/books, group library, OpenLibrary, etc.)
+│   │   └── __tests__/          # vitest composable tests
 │   ├── layouts/                # default layout
 │   ├── middleware/             # auth/admin gating
 │   ├── pages/
+│   │   ├── preview/
+│   │   │   └── books/
+│   │   │       ├── index.vue   # public book preview list
+│   │   │       └── [id].vue    # public book preview detail
 │   │   ├── groups/
 │   │   │   ├── create.vue
 │   │   │   └── [id]/
@@ -176,10 +221,13 @@ Bookclub.Web/
 │   │   └── dashboard.vue
 │   ├── plugins/                # api.ts (sets axios baseURL)
 │   ├── services/               # axios services (api/auth/books/groups)
+│   │   └── __tests__/          # vitest service tests
 │   ├── stores/                 # pinia stores (authStore)
 │   ├── types/                  # DTO typings
-│   └── utils/                  # shared book helpers (covers, author label, isbn extraction)
+│   └── utils/                  # shared helpers (covers, author label, isbn extraction, schedule indexing)
+│       └── __tests__/          # vitest util tests
 ├── public/                     # favicon, robots.txt, staticwebapp.config.json
+├── vitest.config.ts
 └── nuxt.config.ts
 ```
 
@@ -213,7 +261,7 @@ Frontend runs at: `http://localhost:3000`
 
 ## Build & Static Generate
 
-Nuxt 3 static generation outputs to **`.output/public`**.
+Nuxt static generation outputs to **`.output/public`**.
 
 ### Generate static output
 ```bash
@@ -237,6 +285,7 @@ This repo includes `public/staticwebapp.config.json` with a navigation fallback 
 ### Deployment notes (current)
 - GitHub Actions builds with:
   - `npm ci`
+  - `npm run test:ci`
   - `npm run generate`
 - Deployment uploads the generated site from:
   - `Bookclub.Web/.output/public`
@@ -270,7 +319,9 @@ This keeps the repo stable for everyone.
 
 - ✅ Deployed to Azure (Static Web Apps) — frontend link above
 - ✅ Security (frontend gating)
-  - ✅ Public page shows DB data: `/` featured books (requires public `GET /api/Books`)
+  - ✅ Public pages show DB data:
+    - ✅ `/` featured books (requires public `GET /api/Books`)
+    - ✅ `/preview/books` + `/preview/books/:id` (requires public `GET /api/Books` and `GET /api/Books/{id}`)
   - ✅ Login-required pages: `/dashboard`, `/groups/*`
   - ✅ Admin-only pages: `/admin/*`
 - ✅ Groups MVP UI
@@ -280,15 +331,18 @@ This keeps the repo stable for everyone.
   - ✅ Add/delete meetings
   - ✅ Group Library page (`/groups/:id/library`) with cover grid + details modal
 - ✅ Code organization
-  - ✅ Vue components used
+  - ✅ Vue components used + shared components (`BookCard`, `BookCover`)
   - ✅ API calls centralized in `/app/services`
-- ❌ Unit testing for services (Vitest not added yet)
+  - ✅ Page logic refactored into composables where appropriate
+- ✅ Unit testing (Vitest)
+  - ✅ Service tests (e.g., `booksService`)
+  - ✅ Composable tests (OpenLibrary + preview detail + preview list)
+  - ✅ Utility tests (schedule indexing)
 
 ---
 
 ## Next Steps (recommended)
-1. Add **Vitest** + tests for `authService` / `booksService` / `groupsService` (required).
-2. Members management UI on group profile:
+1. Members management UI on group profile:
    - add member (admin) + remove member (admin/self)
-3. Replace dashboard “My Groups” filtering once `/api/groups/mine` exists.
-4. Consider caching book descriptions (beyond in-memory) if OpenLibrary rate limits become an issue.
+2. Replace dashboard “My Groups” filtering once `/api/groups/mine` exists.
+3. Consider caching book descriptions (beyond in-memory) if OpenLibrary rate limits become an issue.

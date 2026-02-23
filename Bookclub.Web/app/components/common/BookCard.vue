@@ -8,24 +8,7 @@
     hover
   >
     <div class="cover-wrap">
-      <v-responsive :aspect-ratio="2 / 3" class="cover-frame rounded">
-        <v-img
-          v-if="coverUrl(book)"
-          :src="coverUrl(book)!"
-          class="cover-img"
-          :alt="String(book.title ?? 'Book cover')"
-        >
-          <template #error>
-            <div class="cover-placeholder">
-              <v-icon icon="mdi-book-open-page-variant" size="18" />
-            </div>
-          </template>
-        </v-img>
-
-        <div v-else class="cover-placeholder">
-          <v-icon icon="mdi-book-open-page-variant" size="18" />
-        </div>
-      </v-responsive>
+      <BookCover :book="book" size="M" :icon-size="18" />
     </div>
 
     <v-card-title class="text-subtitle-1">
@@ -45,7 +28,8 @@
 
 <script setup lang="ts">
 import type { BookDto } from '~/types/dtos'
-import { authorLabel, coverUrl, extractIsbn, publishYearLabel } from '~/utils/books'
+import { authorLabel, extractIsbn, publishYearLabel } from '~/utils/books'
+import BookCover from '~/components/common/BookCover.vue'
 
 const props = defineProps<{
   book: BookDto
@@ -67,33 +51,6 @@ const isbn = computed(() => extractIsbn(props.book))
 
 .cover-wrap {
   padding: 0.9rem 0.9rem 0.25rem;
-}
-
-.cover-frame {
-  width: 100%;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  background: rgba(220, 201, 182, 0.12);
-}
-
-/* v-img fills the responsive frame */
-.cover-img {
-  width: 100%;
-  height: 100%;
-}
-
-.cover-img :deep(.v-img__img) {
-  object-fit: contain;
-}
-
-/* Placeholder fills the frame */
-.cover-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
 }
 
 .meta {

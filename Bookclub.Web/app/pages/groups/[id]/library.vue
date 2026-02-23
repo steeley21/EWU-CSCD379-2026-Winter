@@ -50,24 +50,7 @@
                 <v-card class="bc-card lib-card" rounded="lg" @click="openBook(b)">
                   <div class="lib-card-inner">
                     <div class="lib-cover">
-                      <v-responsive :aspect-ratio="2 / 3" class="lib-cover-frame rounded">
-                        <v-img
-                          v-if="coverUrl(b)"
-                          :src="coverUrl(b)!"
-                          class="lib-cover-img"
-                          :alt="String(b.title ?? 'Book cover')"
-                        >
-                          <template #error>
-                            <div class="lib-cover-placeholder">
-                              <v-icon icon="mdi-book-open-page-variant" size="18" />
-                            </div>
-                          </template>
-                        </v-img>
-
-                        <div v-else class="lib-cover-placeholder">
-                          <v-icon icon="mdi-book-open-page-variant" size="18" />
-                        </div>
-                      </v-responsive>
+                      <BookCover :book="b" size="M" :icon-size="18" />
                     </div>
 
                     <div class="lib-meta">
@@ -94,24 +77,7 @@
           <v-row>
             <v-col cols="12" sm="4">
               <div class="lib-modal-cover">
-                <v-responsive :aspect-ratio="2 / 3" class="lib-modal-frame rounded">
-                  <v-img
-                    v-if="selectedBook && coverUrl(selectedBook)"
-                    :src="coverUrl(selectedBook)!"
-                    class="lib-modal-img"
-                    :alt="String(selectedBook?.title ?? 'Book cover')"
-                  >
-                    <template #error>
-                      <div class="lib-cover-placeholder">
-                        <v-icon icon="mdi-book-open-page-variant" size="22" />
-                      </div>
-                    </template>
-                  </v-img>
-
-                  <div v-else class="lib-cover-placeholder">
-                    <v-icon icon="mdi-book-open-page-variant" size="22" />
-                  </div>
-                </v-responsive>
+                <BookCover :book="selectedBook" size="L" :icon-size="22" />
               </div>
             </v-col>
 
@@ -170,9 +136,10 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/authStore'
 import type { BookDto } from '~/types/dtos'
-import { authorLabel, coverUrl, publishDateLabel } from '~/utils/books'
+import { authorLabel, publishDateLabel } from '~/utils/books'
 import { useGroupLibraryData } from '~/composables/useGroupLibraryData'
 import { useOpenLibraryDescription } from '~/composables/useOpenLibraryDescription'
+import BookCover from '~/components/common/BookCover.vue'
 
 definePageMeta({ middleware: 'auth' })
 

@@ -37,7 +37,7 @@
 
     <v-row v-else dense class="align-stretch">
       <v-col v-for="b in books" :key="String(b.id)" cols="12" sm="6" md="4" lg="3">
-        <BookCard :book="b" :to="`/preview/books/${b.id}`" />
+        <BookCard :book="b" :to="bookTo(b.id)" />
       </v-col>
     </v-row>
   </div>
@@ -55,6 +55,10 @@ const sortItems = [
   { title: 'Year', value: 'year' },
   { title: 'Newest (id)', value: 'id' },
 ]
+
+function bookTo(id: number) {
+  return `/preview/books/${id}`
+}
 </script>
 
 <style scoped>

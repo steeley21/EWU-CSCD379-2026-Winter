@@ -18,25 +18,8 @@
       <v-row>
         <v-col cols="12" md="4">
           <div class="cover">
-            <v-img
-              v-if="coverUrl(book)"
-              :src="coverUrl(book)!"
-              height="360"
-              cover
-              class="rounded"
-              :alt="String(book.title ?? 'Book cover')"
-            >
-              <template #error>
-                <div class="cover-placeholder">
-                  <v-icon icon="mdi-book-open-page-variant" size="22" />
-                </div>
-              </template>
-            </v-img>
-
-            <div v-else class="cover-placeholder">
-              <v-icon icon="mdi-book-open-page-variant" size="22" />
+            <BookCover :book="book" size="L" :icon-size="22" />
             </div>
-          </div>
         </v-col>
 
         <v-col cols="12" md="8">
@@ -76,7 +59,8 @@
 
 <script setup lang="ts">
 import { useBookPreviewDetail } from '~/composables/useBookPreviewDetail'
-import { authorLabel, coverUrl, extractIsbn, publishYearLabel } from '~/utils/books'
+import { authorLabel, extractIsbn, publishYearLabel } from '~/utils/books'
+import BookCover from '~/components/common/BookCover.vue'
 
 const route = useRoute()
 const bookId = computed(() => Number(route.params.id))
@@ -126,15 +110,30 @@ const { book, pending, pageError, description, descLoading } = useBookPreviewDet
   border-radius: 16px;
 }
 
-.cover-placeholder {
-  height: 360px;
-  border-radius: 16px;
+.cover-frame {
+  width: 100%;
+  overflow: hidden;
   border: 1px solid var(--border);
+  background: rgba(220, 201, 182, 0.12);
+}
+
+.cover-img {
+  width: 100%;
+  height: 100%;
+}
+
+.cover-img :deep(.v-img__img) {
+  object-fit: contain;
+}
+
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
-  background: rgba(220, 201, 182, 0.12);
 }
 
 .kv {

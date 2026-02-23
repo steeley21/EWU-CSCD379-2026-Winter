@@ -1,3 +1,5 @@
+// app/composables/useBooksPreview.ts
+import { ref, computed } from 'vue'
 import type { BookDto } from '~/types/dtos'
 import { booksService } from '~/services/booksService'
 import { authorLabel, extractIsbn, publishYearLabel } from '~/utils/books'
@@ -35,6 +37,7 @@ export function useBooksPreview() {
         case 'author':
           return authorLabel(a).localeCompare(authorLabel(b))
         case 'year':
+          // newest year first
           return String(publishYearLabel(b) ?? '').localeCompare(String(publishYearLabel(a) ?? ''))
         case 'id':
           return Number(b.id ?? 0) - Number(a.id ?? 0)
@@ -53,16 +56,11 @@ export function useBooksPreview() {
   })
 
   return {
-    // state
     query,
     sort,
-
-    // data
     books: filtered,
     pending,
     pageError,
-
-    // actions
     refresh,
   }
 }
