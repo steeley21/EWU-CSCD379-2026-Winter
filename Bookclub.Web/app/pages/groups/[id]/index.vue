@@ -22,6 +22,8 @@
           :members="members"
           :loading="loadingMembers"
           :error="membersError"
+          :can-manage="canManage"
+          @invite="openInvite"
         />
         <div class="gp-gap" />
 
@@ -189,6 +191,48 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+      <!-- Invite Member Dialog -->
+<v-dialog v-model="inviteDialog" max-width="480">
+  <v-card class="bc-card" rounded="lg">
+    <v-card-title style="font-family: var(--font-display); font-weight: 800;">
+      Invite Member
+    </v-card-title>
+
+    <v-card-text>
+      <v-text-field
+        v-model="inviteEmail"
+        label="Email address"
+        type="email"
+        variant="outlined"
+        density="comfortable"
+        placeholder="friend@example.com"
+        :disabled="inviteSaving"
+        @keyup.enter="sendInvite"
+      />
+      <v-alert v-if="inviteErr" type="error" variant="tonal" class="mt-2">
+        {{ inviteErr }}
+      </v-alert>
+      <v-alert v-if="inviteSuccess" type="success" variant="tonal" class="mt-2">
+        Invite sent to {{ inviteEmail }}!
+      </v-alert>
+    </v-card-text>
+
+    <v-card-actions>
+      <v-spacer />
+      <v-btn variant="text" @click="inviteDialog = false">Cancel</v-btn>
+      <v-btn
+        color="primary"
+        :loading="inviteSaving"
+        :disabled="!inviteEmail || inviteSaving"
+        @click="sendInvite"
+      >
+        Send Invite
+      </v-btn>
+    </v-card-actions>
+  </v-card>
+</v-dialog>
+
   </div>
 </template>
 
@@ -501,7 +545,55 @@ async function deleteMeeting(gsId: number) {
     scheduleError.value = 'Could not delete meeting.'
     console.error(e)
   }
-}
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Invite Member dialog state
+    // ─────────────────────────────────────────────────────────────
+
+    const inviteDialog = ref(false)
+    const inviteEmail = ref('')
+    const inviteSaving = ref(false)
+    const inviteErr = ref('')
+    const inviteSuccess = ref(false)
+
+    function openInvite() {
+      if (!canManage.value) return
+      inviteEmail.value = ''
+      inviteErr.value = ''
+      inviteSuccess.value = false
+      inviteDialog.value = true
+    }
+
+    async function sendInvite() {
+      inviteErr.value = ''
+      inviteSuccess.value = false
+
+      const email = inviteEmail.value.trim()
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        inviteErr.value = 'Please enter a valid email address.'
+        return
+      }
+
+      inviteSaving.value = true
+      try {
+        await groupsService.inviteMember(groupId.value, email)
+        inviteSuccess.value = true
+        inviteEmail.value = ''
+        setTimeout(() => {
+          inviteDialog.value = false
+          inviteSuccess.value = false
+        }, 1500)
+      } catch (e: any) {
+        const data = e?.response?.data
+        inviteErr.value =
+          (typeof data === 'string' ? data : data?.message) ??
+          e?.message ??
+          'Could not send invite.'
+      } finally {
+        inviteSaving.value = false
+      }
+    }
 
 // ─────────────────────────────────────────────────────────────
 // Load
