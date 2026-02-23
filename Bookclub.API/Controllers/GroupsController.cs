@@ -31,7 +31,7 @@ public class GroupsController : ControllerBase
                 g.GroupName,
                 g.AdminID,
                 g.Admin.FName + " " + g.Admin.LName,
-                g.UserGroups.Count))
+                g.UserGroups.Count(ug => ug.Status == UserGroupStatus.Accepted)))
             .ToListAsync();
         return Ok(groups);
     }
@@ -47,7 +47,7 @@ public class GroupsController : ControllerBase
         if (g == null) return NotFound();
 
         return Ok(new GroupDto(g.GroupID, g.GroupName, g.AdminID,
-            g.Admin.FName + " " + g.Admin.LName, g.UserGroups.Count));
+            g.Admin.FName + " " + g.Admin.LName, g.UserGroups.Count(ug => ug.Status == UserGroupStatus.Accepted)));
     }
 
     [HttpPost]
@@ -97,13 +97,34 @@ public class GroupsController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("mine")]
+    public async Task<IActionResult> GetMine()
+    {
+        var groups = await _db.UserGroups
+            .Where(ug => ug.UserID == CurrentUserId && ug.Status == UserGroupStatus.Accepted)
+            .Include(ug => ug.Group)
+                .ThenInclude(g => g.Admin)
+            .Include(ug => ug.Group)
+                .ThenInclude(g => g.UserGroups)
+            .Select(ug => new GroupDto(
+                ug.Group.GroupID,
+                ug.Group.GroupName,
+                ug.Group.AdminID,
+                ug.Group.Admin.FName + " " + ug.Group.Admin.LName,
+                ug.Group.UserGroups.Count(m => m.Status == UserGroupStatus.Accepted)
+            ))
+            .ToListAsync();
+
+        return Ok(groups);
+    }
+
     // ── Members ───────────────────────────────────────────────────────────────
 
     [HttpGet("{id}/members")]
     public async Task<IActionResult> GetMembers(int id)
     {
         var members = await _db.UserGroups
-            .Where(ug => ug.GroupID == id)
+            .Where(ug => ug.GroupID == id && ug.Status == UserGroupStatus.Accepted)
             .Include(ug => ug.User)
             .Select(ug => new UserGroupDto(ug.UGID, ug.UserID,
                 ug.User.FName + " " + ug.User.LName, ug.User.UserName!))
@@ -241,5 +262,91 @@ public class GroupsController : ControllerBase
         _db.GroupSchedules.Remove(gs);
         await _db.SaveChangesAsync();
         return NoContent();
+    }
+
+    // ── Invites ───────────────────────────────────────────────────────────────────
+
+    [HttpPost("{id}/invite")]
+    public async Task<IActionResult> InviteMember(int id, [FromBody] InviteMemberDto dto)
+    {
+        var group = await _db.Groups.FindAsync(id);
+        if (group == null) return NotFound("Group not found.");
+        if (group.AdminID != CurrentUserId && !User.IsInRole("Admin")) return Forbid();
+
+        // Look up user by email
+        var invitee = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        if (invitee == null)
+            return NotFound(new { message = $"No account found for {dto.Email}." });
+
+        // Check if already a member or already invited
+        var existing = await _db.UserGroups
+            .FirstOrDefaultAsync(ug => ug.GroupID == id && ug.UserID == invitee.Id);
+
+        if (existing != null)
+        {
+            if (existing.Status == UserGroupStatus.Accepted)
+                return Conflict(new { message = "User is already a member of this group." });
+            if (existing.Status == UserGroupStatus.Pending)
+                return Conflict(new { message = "User has already been invited." });
+
+            // Re-invite if they previously declined
+            existing.Status = UserGroupStatus.Pending;
+            await _db.SaveChangesAsync();
+            return Ok();
+        }
+
+        _db.UserGroups.Add(new UserGroup
+        {
+            UserID = invitee.Id,
+            GroupID = id,
+            Status = UserGroupStatus.Pending
+        });
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
+    [HttpGet("my-invites")]
+    public async Task<IActionResult> GetMyInvites()
+    {
+        var invites = await _db.UserGroups
+            .Where(ug => ug.UserID == CurrentUserId && ug.Status == UserGroupStatus.Pending)
+            .Include(ug => ug.Group)
+                .ThenInclude(g => g.Admin)
+            .Include(ug => ug.Group)
+                .ThenInclude(g => g.UserGroups)
+            .Select(ug => new GroupInviteDto(
+                ug.UGID,
+                ug.GroupID,
+                ug.Group.GroupName,
+                ug.Group.Admin.FName + " " + ug.Group.Admin.LName,
+                ug.Group.UserGroups.Count(m => m.Status == UserGroupStatus.Accepted)
+            ))
+            .ToListAsync();
+
+        return Ok(invites);
+    }
+
+    [HttpPost("invites/{ugId}/accept")]
+    public async Task<IActionResult> AcceptInvite(int ugId)
+    {
+        var ug = await _db.UserGroups.FindAsync(ugId);
+        if (ug == null || ug.UserID != CurrentUserId) return NotFound();
+        if (ug.Status != UserGroupStatus.Pending) return BadRequest("Invite is no longer pending.");
+
+        ug.Status = UserGroupStatus.Accepted;
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
+    [HttpPost("invites/{ugId}/decline")]
+    public async Task<IActionResult> DeclineInvite(int ugId)
+    {
+        var ug = await _db.UserGroups.FindAsync(ugId);
+        if (ug == null || ug.UserID != CurrentUserId) return NotFound();
+        if (ug.Status != UserGroupStatus.Pending) return BadRequest("Invite is no longer pending.");
+
+        ug.Status = UserGroupStatus.Declined;
+        await _db.SaveChangesAsync();
+        return Ok();
     }
 }
