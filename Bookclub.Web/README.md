@@ -341,7 +341,7 @@ This keeps the repo stable for everyone.
 
 ---
 
-## Next Steps (recommended)
+## Next Steps 
 1. Members management UI on group profile:
    - add member (admin) + remove member (admin/self)
 2. Replace dashboard “My Groups” filtering once `/api/groups/mine` exists.
