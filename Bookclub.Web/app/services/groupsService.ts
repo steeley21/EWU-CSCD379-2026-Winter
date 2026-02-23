@@ -9,6 +9,7 @@ import type {
   GroupMemberDto,
   GroupScheduleDto,
   GroupSummaryDto,
+  GroupInviteDto
 } from '~/types/dtos'
 
 type AnyRec = Record<string, any>
@@ -158,9 +159,9 @@ function normalizeSchedule(raw: AnyRec): GroupScheduleDto | null {
 export function createGroupsService(http: AxiosInstance = api) {
   return {
     async getAll(): Promise<GroupSummaryDto[]> {
-      const res = await http.get<AnyRec[]>('/api/groups')
-      const list = Array.isArray(res.data) ? res.data : []
-      return list.map(normalizeGroup).filter((x): x is GroupSummaryDto => !!x)
+        const res = await http.get<AnyRec[]>('/api/groups/mine')
+        const list = Array.isArray(res.data) ? res.data : []
+        return list.map(normalizeGroup).filter((x): x is GroupSummaryDto => !!x)
     },
 
     async getById(groupId: number): Promise<GroupSummaryDto | null> {
@@ -220,6 +221,23 @@ export function createGroupsService(http: AxiosInstance = api) {
 
     async removeBook(groupId: number, gbId: number): Promise<void> {
         await http.delete(`/api/groups/${groupId}/books/${gbId}`)
+    },
+
+    async inviteMember(groupId: number, email: string): Promise<void> {
+        await http.post(`/api/groups/${groupId}/invite`, { email })
+    },
+
+    async getPendingInvites(): Promise<GroupInviteDto[]> {
+        const res = await http.get('/api/groups/my-invites')
+        return res.data
+    },
+
+    async acceptInvite(inviteId: number): Promise<void> {
+        await http.post(`/api/groups/invites/${inviteId}/accept`)
+    },
+
+    async declineInvite(inviteId: number): Promise<void> {
+        await http.post(`/api/groups/invites/${inviteId}/decline`)
     },
   }
 }

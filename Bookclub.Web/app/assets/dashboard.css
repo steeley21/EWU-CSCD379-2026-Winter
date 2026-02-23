@@ -499,3 +499,54 @@
     color: #b94a48;
     font-size: 0.875rem;
 }
+
+.group-card--invite {
+    border: 2px dashed var(--camel);
+    opacity: 0.95;
+}
+
+.group-card-banner--invite {
+    background: linear-gradient(135deg, var(--pale-oak), var(--camel));
+}
+
+.invite-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+}
+
+.btn-invite-accept,
+.btn-invite-decline {
+    flex: 1;
+    padding: 0.4rem 0.75rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+    .btn-invite-accept:disabled,
+    .btn-invite-decline:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+.btn-invite-accept {
+    background: var(--camel);
+    color: white;
+}
+
+    .btn-invite-accept:hover:not(:disabled) {
+        opacity: 0.85;
+    }
+
+.btn-invite-decline {
+    background: var(--pale-oak);
+    color: var(--coffee-bean);
+}
+
+    .btn-invite-decline:hover:not(:disabled) {
+        opacity: 0.75;
+    }

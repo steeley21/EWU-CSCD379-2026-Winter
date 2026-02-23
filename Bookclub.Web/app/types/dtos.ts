@@ -74,3 +74,10 @@ export type GroupBookDto = {
   groupId: number
   book: BookDto
 }
+export interface GroupInviteDto {
+    inviteId: number
+    groupId: number
+    groupName: string
+    adminFullName: string
+    memberCount: number
+}

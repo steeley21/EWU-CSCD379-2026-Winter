@@ -23,6 +23,17 @@
         </div>
       </div>
     </v-card-text>
+
+    <v-card-actions v-if="canManage" class="gp-actions">
+      <v-btn
+        variant="tonal"
+        size="small"
+        prepend-icon="mdi-email-plus-outline"
+        @click="$emit('invite')"
+      >
+        Invite Member
+      </v-btn>
+    </v-card-actions>
   </v-card>
 </template>
 
@@ -33,7 +44,10 @@ const props = defineProps<{
   members: GroupMemberDto[]
   loading: boolean
   error: string
+  canManage?: boolean
 }>()
+
+defineEmits<{ invite: [] }>()
 
 const preview = computed(() => props.members.slice(0, 6))
 
@@ -66,4 +80,5 @@ function initials(name: string) {
   border-radius: 14px;
   padding: 0.75rem 0.9rem;
 }
+.gp-actions { padding: 0 1rem 0.75rem; }
 </style>
