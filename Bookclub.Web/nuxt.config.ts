@@ -13,7 +13,11 @@ export default defineNuxtConfig({
     },
     plugins: ['~/plugins/vuetify.ts'],
 
-    css: ['vuetify/styles', '@mdi/font/css/materialdesignicons.css', '~/assets/bookclub-theme.css'],
+    css: [
+        'vuetify/styles',
+        '@mdi/font/css/materialdesignicons.css',
+        '~/assets/bookclub-theme.css',
+    ],
 
     build: {
         transpile: ['vuetify'],
