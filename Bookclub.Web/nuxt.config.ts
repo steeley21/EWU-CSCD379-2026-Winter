@@ -17,6 +17,7 @@ export default defineNuxtConfig({
         'vuetify/styles',
         '@mdi/font/css/materialdesignicons.css',
         '~/assets/bookclub-theme.css',
+        '~/assets/dashboard.css',
     ],
 
     build: {
