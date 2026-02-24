@@ -14,6 +14,30 @@
       <div class="eyebrow">Group</div>
       <h1 class="gp-title">{{ group?.groupName ?? 'Group' }}</h1>
       <p v-if="group?.adminFullName" class="gp-sub">Admin: {{ group.adminFullName }}</p>
+
+      <!-- Admin: delete group | Member: leave group -->
+      <div class="gp-header-actions">
+        <v-btn
+          v-if="canManage"
+          color="error"
+          variant="tonal"
+          size="small"
+          prepend-icon="mdi-delete-outline"
+          @click="confirmDeleteDialog = true"
+        >
+          Delete Group
+        </v-btn>
+        <v-btn
+          v-else-if="group"
+          color="warning"
+          variant="tonal"
+          size="small"
+          prepend-icon="mdi-exit-to-app"
+          @click="confirmLeaveDialog = true"
+        >
+          Leave Group
+        </v-btn>
+      </div>
     </div>
 
     <v-row>
@@ -230,6 +254,48 @@
       >
         Send Invite
       </v-btn>
+    </v-card-actions>
+  </v-card>
+</v-dialog>
+
+      <!-- Confirm Delete Group -->
+<v-dialog v-model="confirmDeleteDialog" max-width="420">
+  <v-card class="bc-card" rounded="lg">
+    <v-card-title style="font-family: var(--font-display); font-weight: 800; color: rgb(var(--v-theme-error))">
+      Delete Group?
+    </v-card-title>
+    <v-card-text>
+      This will permanently delete <strong>{{ group?.groupName }}</strong> along with all its books,
+      meetings, and members. This cannot be undone.
+    </v-card-text>
+    <v-alert v-if="deleteGroupErr" type="error" variant="tonal" class="mx-4 mb-2">
+      {{ deleteGroupErr }}
+    </v-alert>
+    <v-card-actions>
+      <v-spacer />
+      <v-btn variant="text" @click="confirmDeleteDialog = false">Cancel</v-btn>
+      <v-btn color="error" :loading="deleteGroupSaving" @click="doDeleteGroup">Delete</v-btn>
+    </v-card-actions>
+  </v-card>
+</v-dialog>
+
+<!-- Confirm Leave Group -->
+<v-dialog v-model="confirmLeaveDialog" max-width="420">
+  <v-card class="bc-card" rounded="lg">
+    <v-card-title style="font-family: var(--font-display); font-weight: 800;">
+      Leave Group?
+    </v-card-title>
+    <v-card-text>
+      Are you sure you want to leave <strong>{{ group?.groupName }}</strong>?
+      You'll need a new invite to rejoin.
+    </v-card-text>
+    <v-alert v-if="leaveGroupErr" type="error" variant="tonal" class="mx-4 mb-2">
+      {{ leaveGroupErr }}
+    </v-alert>
+    <v-card-actions>
+      <v-spacer />
+      <v-btn variant="text" @click="confirmLeaveDialog = false">Cancel</v-btn>
+      <v-btn color="warning" :loading="leaveGroupSaving" @click="doLeaveGroup">Leave</v-btn>
     </v-card-actions>
   </v-card>
 </v-dialog>
@@ -596,6 +662,52 @@ async function deleteMeeting(gsId: number) {
       }
     }
 
+
+    // ─────────────────────────────────────────────────────────────
+    // Delete / Leave group
+    // ─────────────────────────────────────────────────────────────
+
+    const confirmDeleteDialog = ref(false)
+    const deleteGroupErr = ref('')
+    const deleteGroupSaving = ref(false)
+
+    async function doDeleteGroup() {
+      deleteGroupErr.value = ''
+      deleteGroupSaving.value = true
+      try {
+        await groupsService.deleteGroup(groupId.value)
+        router.push('/dashboard')
+      } catch (e: any) {
+        const data = e?.response?.data
+        deleteGroupErr.value =
+          (typeof data === 'string' ? data : data?.message) ??
+          e?.message ??
+          'Could not delete group.'
+      } finally {
+        deleteGroupSaving.value = false
+      }
+    }
+
+    const confirmLeaveDialog = ref(false)
+    const leaveGroupErr = ref('')
+    const leaveGroupSaving = ref(false)
+
+    async function doLeaveGroup() {
+      leaveGroupErr.value = ''
+      leaveGroupSaving.value = true
+      try {
+        await groupsService.leaveGroup(groupId.value)
+        router.push('/dashboard')
+      } catch (e: any) {
+        const data = e?.response?.data
+        leaveGroupErr.value =
+          (typeof data === 'string' ? data : data?.message) ??
+          e?.message ??
+          'Could not leave group.'
+      } finally {
+        leaveGroupSaving.value = false
+      }
+    }
 // ─────────────────────────────────────────────────────────────
 // Load
 // ─────────────────────────────────────────────────────────────
