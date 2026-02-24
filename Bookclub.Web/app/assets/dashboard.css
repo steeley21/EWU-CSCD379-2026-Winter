@@ -547,6 +547,31 @@
     color: var(--coffee-bean);
 }
 
-    .btn-invite-decline:hover:not(:disabled) {
-        opacity: 0.75;
-    }
+.btn-invite-decline:hover:not(:disabled) {
+    opacity: 0.75;
+}
+
+.stat-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.action-icon svg {
+    width: 19px;
+    height: 19px;
+}
+
+.group-meta-pill svg {
+    width: 11px;
+    height: 11px;
+}
+
+.group-card-arrow svg {
+    width: 16px;
+    height: 16px;
+}
+
+.groups-empty-icon svg {
+    width: 26px;
+    height: 26px;
+}
