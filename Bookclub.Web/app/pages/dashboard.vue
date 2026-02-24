@@ -273,8 +273,6 @@ onMounted(async () => {
 })
 </script>
 
-<style src="~/assets/dashboard.css" />
-
 <style scoped>
 /* ── Invites Tray ── */
 .invites-tray {
@@ -373,4 +371,16 @@ onMounted(async () => {
 }
 
 .btn-invite-decline:hover:not(:disabled) { opacity: 0.65; }
+
+.group-card-arrow {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.group-card-arrow svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
 </style>
