@@ -43,3 +43,9 @@
 .gp-gap {
   height: 1rem;
 }
+
+.gp-header-actions {
+    margin-top: 0.75rem;
+    display: flex;
+    gap: 0.5rem;
+}
