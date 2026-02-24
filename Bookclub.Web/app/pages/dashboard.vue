@@ -1,51 +1,68 @@
 <template>
   <div class="dashboard">
 
+    <!-- ── Ambient background texture ── -->
+    <div class="dashboard-bg" aria-hidden="true">
+      <div class="bg-blob bg-blob--1" />
+      <div class="bg-blob bg-blob--2" />
+    </div>
+
     <!-- ── Header ── -->
-    <div class="dashboard-header">
-      <div class="eyebrow">Welcome back</div>
+    <header class="dashboard-header">
+      <span class="eyebrow">
+        <span class="eyebrow-dot" />
+        Welcome back
+      </span>
       <h1 class="dashboard-title">{{ auth.username }}</h1>
       <p class="dashboard-sub">{{ auth.email }}</p>
-    </div>
+    </header>
 
     <!-- ── Stats Row ── -->
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <div class="stat-icon-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
           </svg>
         </div>
-        <div class="stat-label">My Library</div>
-        <div class="stat-value">—</div>
+        <div class="stat-content">
+          <div class="stat-label">My Library</div>
+          <div class="stat-value">—</div>
+        </div>
       </div>
+
       <div class="stat-card">
-        <div class="stat-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <div class="stat-icon-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
         </div>
-        <div class="stat-label">My Groups</div>
-        <div class="stat-value">{{ loading ? '—' : groups.length }}</div>
+        <div class="stat-content">
+          <div class="stat-label">My Groups</div>
+          <div class="stat-value">{{ loading ? '—' : groups.length }}</div>
+        </div>
       </div>
+
       <div class="stat-card">
-        <div class="stat-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <div class="stat-icon-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
         </div>
-        <div class="stat-label">Upcoming Meetings</div>
-        <div class="stat-value">—</div>
+        <div class="stat-content">
+          <div class="stat-label">Upcoming Meetings</div>
+          <div class="stat-value">—</div>
+        </div>
       </div>
     </div>
 
     <!-- ── Quick Actions ── -->
     <div class="quick-actions-card">
-      <div class="section-card-title">Quick Actions</div>
+      <h2 class="section-title">Quick Actions</h2>
       <div class="actions-grid">
         <button class="action-tile" @click="navigateTo('/books')">
           <span class="action-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
           </span>
@@ -53,7 +70,7 @@
         </button>
         <button class="action-tile" @click="navigateTo('/groups')">
           <span class="action-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </span>
@@ -61,7 +78,7 @@
         </button>
         <button class="action-tile" @click="navigateTo('/library')">
           <span class="action-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
             </svg>
           </span>
@@ -69,7 +86,7 @@
         </button>
         <button class="action-tile" @click="navigateTo('/meetings')">
           <span class="action-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
           </span>
@@ -86,28 +103,27 @@
           <div class="groups-line" />
         </div>
         <button class="btn-create-group" @click="navigateTo('/groups/create')">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
           Create Group
         </button>
       </div>
 
-      <!-- ── Pending Invites (inline, above group cards) ── -->
+      <!-- ── Pending Invites ── -->
       <div v-if="pendingInvites.length" class="invites-tray">
-        <div class="invites-tray-label">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
-          </svg>
-          {{ pendingInvites.length }} pending invite{{ pendingInvites.length !== 1 ? 's' : '' }}
+        <div class="invites-tray-header">
+          <div class="invites-tray-label">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+            </svg>
+            Pending Invites
+          </div>
+          <span class="invites-badge">{{ pendingInvites.length }}</span>
         </div>
 
         <div class="invites-list">
-          <div
-            v-for="invite in pendingInvites"
-            :key="invite.ugid"
-            class="invite-row"
-          >
+          <div v-for="invite in pendingInvites" :key="invite.ugid" class="invite-row">
             <div class="invite-row-info">
               <span class="invite-row-name">{{ invite.groupName }}</span>
               <span class="invite-row-meta">
@@ -121,14 +137,14 @@
                 :disabled="respondingInvite === invite.ugid"
                 @click="respondToInvite(invite.ugid, 'accept')"
               >
-                ✓ Accept
+                Accept
               </button>
               <button
                 class="btn-invite-decline"
                 :disabled="respondingInvite === invite.ugid"
                 @click="respondToInvite(invite.ugid, 'decline')"
               >
-                ✕ Decline
+                Decline
               </button>
             </div>
           </div>
@@ -137,16 +153,21 @@
 
       <!-- Loading state -->
       <div v-if="loading" class="groups-loading">
-        <div class="loading-bar" /><div class="loading-bar loading-bar--short" />
+        <div class="loading-bar" />
+        <div class="loading-bar loading-bar--short" />
       </div>
 
       <!-- Fetch error -->
-      <div v-else-if="fetchError" class="groups-fetch-error">{{ fetchError }}</div>
+      <div v-else-if="fetchError" class="groups-fetch-error">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ fetchError }}
+      </div>
 
       <!-- Normal content -->
       <div v-else>
         <div class="groups-grid">
-          <!-- Populated state -->
           <template v-if="groups.length">
             <div
               v-for="group in groups"
@@ -154,21 +175,26 @@
               class="group-card"
               @click="navigateTo(`/groups/${group.groupId}`)"
             >
-              <div class="group-card-banner" />
+              <div class="group-card-accent" />
               <div class="group-card-body">
+                <div class="group-card-top">
+                  <div class="group-card-avatar">
+                    {{ group.groupName?.charAt(0)?.toUpperCase() ?? '?' }}
+                  </div>
+                  <span class="group-card-arrow">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                    </svg>
+                  </span>
+                </div>
                 <div class="group-card-name">{{ group.groupName }}</div>
                 <p class="group-card-desc">{{ group.adminFullName ? `Admin: ${group.adminFullName}` : 'No description yet.' }}</p>
-                <div class="group-card-meta">
+                <div class="group-card-footer">
                   <span class="group-meta-pill">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                     </svg>
                     {{ group.memberCount }} member{{ group.memberCount !== 1 ? 's' : '' }}
-                  </span>
-                  <span class="group-card-arrow">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                    </svg>
                   </span>
                 </div>
               </div>
@@ -177,17 +203,19 @@
 
           <!-- Empty state -->
           <div v-else class="groups-empty">
-            <div class="groups-empty-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            <div class="groups-empty-illustration">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+                <circle cx="40" cy="40" r="38" stroke="currentColor" stroke-width="1" stroke-dasharray="4 4" opacity="0.3"/>
+                <path d="M28 52v-3a8 8 0 0 1 8-8h8a8 8 0 0 1 8 8v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="40" cy="30" r="7" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M56 52v-2a8 8 0 0 0-4-6.93" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M24 52v-2a8 8 0 0 1 4-6.93" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
             </div>
-            <div class="groups-empty-text">You're not in any groups yet</div>
-            <p class="groups-empty-sub">
-              Reading is better together. Join an existing group or start your own.
-            </p>
+            <div class="groups-empty-text">No groups yet</div>
+            <p class="groups-empty-sub">Reading is better together. Join an existing group or start your own.</p>
             <button class="btn-empty-create" @click="navigateTo('/groups/create')">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
               Create a Group
@@ -201,6 +229,7 @@
 </template>
 
 <script setup lang="ts">
+import '~/assets/dashboard.css'
 import { useAuthStore } from '~/stores/authStore'
 import { groupsService } from '~/services/groupsService'
 import type { GroupSummaryDto, GroupInviteDto } from '~/types/dtos'
@@ -272,115 +301,3 @@ onMounted(async () => {
   await Promise.all([loadGroups(), loadInvites()])
 })
 </script>
-
-<style scoped>
-/* ── Invites Tray ── */
-.invites-tray {
-  margin-bottom: 1.25rem;
-  border: 1.5px dashed var(--camel, #b5845a);
-  border-radius: 16px;
-  padding: 1rem 1.1rem;
-  background: transparent;
-}
-
-.invites-tray-label {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--camel, #b5845a);
-  margin-bottom: 0.75rem;
-}
-
-.invites-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.invite-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  background: var(--pale-oak, #f5ede4);
-  border-radius: 12px;
-  padding: 0.65rem 0.9rem;
-  flex-wrap: wrap;
-}
-
-.invite-row-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.invite-row-name {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--coffee-bean, #2c1810);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.invite-row-meta {
-  font-size: 0.78rem;
-  color: var(--text-muted, #8a7060);
-}
-
-.invite-row-actions {
-  display: flex;
-  gap: 0.4rem;
-  flex-shrink: 0;
-}
-
-.btn-invite-accept,
-.btn-invite-decline {
-  padding: 0.35rem 0.8rem;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.8rem;
-  border: none;
-  cursor: pointer;
-  transition: opacity 0.15s;
-  white-space: nowrap;
-}
-
-.btn-invite-accept:disabled,
-.btn-invite-decline:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.btn-invite-accept {
-  background: var(--camel, #b5845a);
-  color: #fff;
-}
-
-.btn-invite-accept:hover:not(:disabled) { opacity: 0.82; }
-
-.btn-invite-decline {
-  background: transparent;
-  color: var(--text-muted, #8a7060);
-  border: 1.5px solid currentColor;
-}
-
-.btn-invite-decline:hover:not(:disabled) { opacity: 0.65; }
-
-.group-card-arrow {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-}
-
-.group-card-arrow svg {
-    width: 16px;
-    height: 16px;
-    display: block;
-}
-</style>
