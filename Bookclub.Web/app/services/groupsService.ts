@@ -159,6 +159,18 @@ function normalizeSchedule(raw: AnyRec): GroupScheduleDto | null {
   }
 }
 
+function normalizeInvite(raw: AnyRec): GroupInviteDto | null {
+  const inviteId = toNumber(raw.inviteId ?? raw.ugid ?? raw.UGID ?? raw.id ?? raw.Id)
+  const groupId = toNumber(raw.groupId ?? raw.groupID ?? raw.GroupID ?? raw.GroupId)
+  const groupName = toStr(raw.groupName ?? raw.GroupName).trim()
+  const adminFullName = toStr(raw.adminFullName ?? raw.AdminFullName).trim()
+  const memberCount = toNumber(raw.memberCount ?? raw.MemberCount ?? 0)
+
+  if (!inviteId || !groupId) return null
+
+  return { inviteId, groupId, groupName, adminFullName, memberCount }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Service
 // ─────────────────────────────────────────────────────────────
@@ -236,7 +248,8 @@ export function createGroupsService(http: AxiosInstance = api) {
 
     async getPendingInvites(): Promise<GroupInviteDto[]> {
         const res = await http.get('/api/groups/my-invites')
-        return res.data
+        const list = Array.isArray(res.data) ? res.data : []
+        return list.map(normalizeInvite).filter((x): x is GroupInviteDto => !!x)
     },
 
     async acceptInvite(inviteId: number): Promise<void> {

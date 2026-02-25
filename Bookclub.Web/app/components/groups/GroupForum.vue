@@ -245,11 +245,13 @@ function postCountFor(catId: string) {
 }
 
 function lastActivityFor(catId: string) {
-  const catPosts = allLoadedPosts.value.filter(p => p.category === catId)
-  if (!catPosts.length) return 'No posts yet'
-  const latest = catPosts.slice().sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  )[0]
+  const latest = allLoadedPosts.value
+    .filter(p => p.category === catId)
+    .slice()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .at(0)
+
+  if (!latest) return 'No posts yet'
   return timeAgo(latest.createdAt)
 }
 
@@ -262,7 +264,6 @@ async function openCategory(cat: ForumCategory) {
   try {
     posts.value = await forumService.getPosts(props.groupId, cat.id)
     // merge into allLoadedPosts for the category-list stats
-    const newIds = new Set(posts.value.map(p => p.fpId))
     allLoadedPosts.value = [
       ...allLoadedPosts.value.filter(p => p.category !== cat.id),
       ...posts.value,

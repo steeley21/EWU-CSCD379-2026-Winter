@@ -123,7 +123,7 @@
         </div>
 
         <div class="invites-list">
-          <div v-for="invite in pendingInvites" :key="invite.ugid" class="invite-row">
+          <div v-for="invite in pendingInvites" :key="invite.inviteId" class="invite-row">
             <div class="invite-row-info">
               <span class="invite-row-name">{{ invite.groupName }}</span>
               <span class="invite-row-meta">
@@ -134,15 +134,15 @@
             <div class="invite-row-actions">
               <button
                 class="btn-invite-accept"
-                :disabled="respondingInvite === invite.ugid"
-                @click="respondToInvite(invite.ugid, 'accept')"
+                :disabled="respondingInvite === invite.inviteId"
+                @click="respondToInvite(invite.inviteId, 'accept')"
               >
                 Accept
               </button>
               <button
                 class="btn-invite-decline"
-                :disabled="respondingInvite === invite.ugid"
-                @click="respondToInvite(invite.ugid, 'decline')"
+                :disabled="respondingInvite === invite.inviteId"
+                @click="respondToInvite(invite.inviteId, 'decline')"
               >
                 Decline
               </button>
@@ -279,7 +279,7 @@ async function respondToInvite(ugid: number, action: 'accept' | 'decline') {
     } else {
       await groupsService.declineInvite(ugid)
     }
-    pendingInvites.value = pendingInvites.value.filter(i => i.ugid !== ugid)
+    pendingInvites.value = pendingInvites.value.filter(i => i.inviteId !== ugid)
   } catch (e) {
     console.error(`Could not ${action} invite`, e)
   } finally {

@@ -49,15 +49,19 @@ function normalizePost(raw: AnyRec): ForumPostDto | null {
 }
 
 function normalizePostDetail(raw: AnyRec): ForumPostDetailDto | null {
-    const base = normalizePost(raw)
-    if (!base) return null
+  const base = normalizePost(raw)
+  if (!base) return null
 
-    const repliesRaw = Array.isArray(raw.replies ?? raw.Replies) ? (raw.replies ?? raw.Replies) : []
+  const repliesRaw = Array.isArray(raw.replies ?? raw.Replies) ? (raw.replies ?? raw.Replies) : []
 
-    return {
-        ...base,
-        replies: repliesRaw.map(normalizeReply).filter((r): r is ForumReplyDto => !!r),
-    }
+  const replies = (repliesRaw as AnyRec[])
+    .map(normalizeReply)
+    .filter((r): r is ForumReplyDto => r != null)
+
+  return {
+    ...base,
+    replies,
+  }
 }
 
 // ─────────────────────────────────────────────────────────────

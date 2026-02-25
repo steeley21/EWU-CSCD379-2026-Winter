@@ -103,7 +103,7 @@
                   :color="item.roles.includes('Admin') ? 'warning' : 'success'"
                   size="small"
                   variant="tonal"
-                  :loading="roleLoadingId === item.id"
+                  :loading="roleLoadingId === item.userId"
                   @click="toggleAdmin(item)"
                 />
               </template>
@@ -332,11 +332,11 @@ async function loadUsers() {
 const roleLoadingId = ref<string | null>(null)
 
 async function toggleAdmin(user: AdminUserDto) {
-  roleLoadingId.value = user.id
+  roleLoadingId.value = user.userId
   const isAdmin = user.roles.includes('Admin')
   try {
-    const updated = await adminService.setRole(user.id, 'Admin', !isAdmin)
-    const idx = users.value.findIndex(u => u.id === user.id)
+    const updated = await adminService.setRole(user.userId, 'Admin', !isAdmin)
+    const idx = users.value.findIndex(u => u.userId === user.userId)
     if (idx !== -1) users.value[idx] = updated
   } catch (e: any) {
     usersError.value = e?.response?.data?.message ?? e?.message ?? 'Could not update role.'
@@ -362,8 +362,8 @@ async function doDeleteUser() {
   deleteUserErr.value = ''
   deleteUserSaving.value = true
   try {
-    await adminService.deleteUser(pendingDeleteUser.value.id)
-    users.value = users.value.filter(u => u.id !== pendingDeleteUser.value!.id)
+    await adminService.deleteUser(pendingDeleteUser.value.userId)
+    users.value = users.value.filter(u => u.userId !== pendingDeleteUser.value!.userId)
     deleteUserDialog.value = false
   } catch (e: any) {
     deleteUserErr.value = e?.response?.data?.message ?? e?.message ?? 'Could not delete user.'
