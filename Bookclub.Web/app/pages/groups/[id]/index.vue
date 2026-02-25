@@ -573,9 +573,8 @@ async function saveMeeting() {
     return
   }
 
-  const time = normalizeTime(meetingTime.value) ?? '19:00'
-  const localIso = `${meetingDate.value}T${time}:00`
-  const dateTimeIso = new Date(localIso).toISOString()
+    const time = normalizeTime(meetingTime.value) ?? '19:00'
+    const dateTimeIso = `${meetingDate.value}T${time}:00`
 
   meetingSaving.value = true
   try {
