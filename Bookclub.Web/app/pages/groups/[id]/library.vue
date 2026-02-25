@@ -21,7 +21,7 @@
           <div class="lib-head">
             <div>
               <div class="lib-title">
-                Library <span class="gp-count">({{ books.length }})</span>
+                Library <span class="gp-count">({{ groupBooks.length }})</span>
               </div>
               <div class="gp-sub">Click a book to view details.</div>
             </div>
@@ -34,28 +34,32 @@
               {{ pageError }}
             </v-alert>
 
-            <div v-else-if="books.length === 0" class="gp-muted">
+            <div v-else-if="groupBooks.length === 0" class="gp-muted">
               No books added to this group yet.
             </div>
 
             <v-row v-else class="lib-grid align-stretch" dense>
               <v-col
-                v-for="b in books"
-                :key="b.id"
+                v-for="gb in groupBooks"
+                :key="gb.gbId"
                 cols="12"
                 sm="6"
                 md="4"
                 lg="3"
               >
-                <v-card class="bc-card lib-card" rounded="lg" @click="openBook(b)">
+                <v-card class="bc-card lib-card" rounded="lg" @click="openBook(gb)">
                   <div class="lib-card-inner">
                     <div class="lib-cover">
-                      <BookCover :book="b" size="M" :icon-size="18" />
+                      <BookCover :book="gb.book" size="M" :icon-size="18" />
                     </div>
 
                     <div class="lib-meta">
-                      <div class="lib-book-title">{{ String(b.title ?? 'Untitled') }}</div>
-                      <div class="gp-muted gp-small">{{ authorLabel(b) }}</div>
+                      <div class="lib-book-title">{{ String(gb.book.title ?? 'Untitled') }}</div>
+                      <div class="gp-muted gp-small">{{ authorLabel(gb.book) }}</div>
+
+                      <div class="mt-2">
+                        <BookRatingSummary :avg="gb.avgRating ?? null" :count="gb.reviewCount ?? 0" />
+                      </div>
                     </div>
                   </div>
                 </v-card>
@@ -122,6 +126,51 @@
               {{ description }}
             </div>
           </div>
+
+          <div class="lib-desc">
+            <div class="lib-desc-title">Reviews</div>
+
+            <BookRatingSummary
+              :avg="selectedGb?.avgRating ?? null"
+              :count="selectedGb?.reviewCount ?? 0"
+            />
+
+            <v-progress-linear
+              v-if="reviewsLoading"
+              indeterminate
+              color="var(--camel)"
+              class="my-2"
+            />
+
+            <v-alert v-else-if="reviewsError" type="error" variant="tonal" class="my-2">
+              {{ reviewsError }}
+            </v-alert>
+
+            <div v-else>
+              <div class="mt-3" style="font-family: var(--font-display); font-weight: 800; color: var(--coffee-bean);">
+                Your review
+              </div>
+
+              <BookReviewEditor
+                :initial-rating="myReview?.rating ?? null"
+                :initial-comment="myReview?.comment ?? ''"
+                :saving="reviewSaving"
+                :can-delete="!!myReview"
+                @save="onSaveReview"
+                @delete="onDeleteMine"
+              />
+
+              <div class="mt-4" style="font-family: var(--font-display); font-weight: 800; color: var(--coffee-bean);">
+                Member reviews
+              </div>
+
+              <BookReviewList
+                :reviews="otherReviews"
+                :can-moderate="canModerate"
+                @moderate-delete="onModerateDelete"
+              />
+            </div>
+          </div>
         </v-card-text>
 
         <v-card-actions>
@@ -135,11 +184,16 @@
 
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/authStore'
-import type { BookDto } from '~/types/dtos'
+import type { BookDto, GroupBookDto, UpsertGroupBookReviewDto } from '~/types/dtos'
 import { authorLabel, publishDateLabel } from '~/utils/books'
 import { useGroupLibraryData } from '~/composables/useGroupLibraryData'
 import { useOpenLibraryDescription } from '~/composables/useOpenLibraryDescription'
+import { useGroupBookReviews } from '~/composables/useGroupBookReviews'
+
 import BookCover from '~/components/common/BookCover.vue'
+import BookRatingSummary from '~/components/groups/BookRatingSummary.vue'
+import BookReviewEditor from '~/components/groups/BookReviewEditor.vue'
+import BookReviewList from '~/components/groups/BookReviewList.vue'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -148,20 +202,86 @@ const route = useRoute()
 
 const groupId = computed(() => Number(route.params.id))
 
-const { group, books, loading, pageError, scheduledDates, loadAll } = useGroupLibraryData()
+const { group, groupBooks, books, loading, pageError, scheduledDates, loadAll } = useGroupLibraryData()
 
 // dialog state
 const detailsOpen = ref(false)
-const selectedBook = ref<BookDto | null>(null)
+const selectedGb = ref<GroupBookDto | null>(null)
+const selectedBook = computed<BookDto | null>(() => selectedGb.value?.book ?? null)
 
 // OpenLibrary description (shared)
 const { description, loading: descLoading, reset: resetDesc, loadForBook } = useOpenLibraryDescription()
 
-async function openBook(b: BookDto) {
-  selectedBook.value = b
+// Reviews
+const {
+  otherReviews,
+  myReview,
+  loading: reviewsLoading,
+  error: reviewsError,
+  reset: resetReviews,
+  load: loadReviews,
+  saveMine,
+  deleteMine,
+  moderateDelete,
+} = useGroupBookReviews()
+
+const reviewSaving = ref(false)
+
+const canModerate = computed(() =>
+  auth.isAdmin || (!!group.value?.adminId && group.value.adminId === auth.userId)
+)
+
+async function openBook(gb: GroupBookDto) {
+  if (!Number.isFinite(groupId.value) || groupId.value <= 0) return
+
+  selectedGb.value = gb
   detailsOpen.value = true
+
   resetDesc()
-  await loadForBook(b)
+  resetReviews()
+
+  if (gb.book) await loadForBook(gb.book)
+  await loadReviews(groupId.value, gb.gbId)
+}
+
+async function onSaveReview(payload: UpsertGroupBookReviewDto) {
+  if (!selectedGb.value) return
+  reviewSaving.value = true
+  try {
+    await saveMine(groupId.value, selectedGb.value.gbId, payload)
+
+    // refresh summaries in grid (avg/count)
+    await loadAll(groupId.value)
+
+    // re-bind selectedGb to refreshed object (so avg/count update in modal too)
+    const refreshed = groupBooks.value.find(x => x.gbId === selectedGb.value?.gbId)
+    if (refreshed) selectedGb.value = refreshed
+  } finally {
+    reviewSaving.value = false
+  }
+}
+
+async function onDeleteMine() {
+  if (!selectedGb.value) return
+  reviewSaving.value = true
+  try {
+    await deleteMine(groupId.value, selectedGb.value.gbId)
+    await loadAll(groupId.value)
+
+    const refreshed = groupBooks.value.find(x => x.gbId === selectedGb.value?.gbId)
+    if (refreshed) selectedGb.value = refreshed
+  } finally {
+    reviewSaving.value = false
+  }
+}
+
+async function onModerateDelete(reviewId: number) {
+  if (!selectedGb.value) return
+  await moderateDelete(groupId.value, selectedGb.value.gbId, reviewId)
+  await loadAll(groupId.value)
+
+  const refreshed = groupBooks.value.find(x => x.gbId === selectedGb.value?.gbId)
+  if (refreshed) selectedGb.value = refreshed
 }
 
 function formatDateTime(iso: string): string {
@@ -187,6 +307,14 @@ onMounted(async () => {
 watch(() => route.params.id, async () => {
   const id = Number(route.params.id)
   if (Number.isFinite(id) && id > 0) await loadAll(id)
+})
+
+watch(detailsOpen, (open) => {
+  if (!open) {
+    selectedGb.value = null
+    resetDesc()
+    resetReviews()
+  }
 })
 </script>
 
@@ -308,14 +436,6 @@ watch(() => route.params.id, async () => {
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
-
-/* (Removed from card preview; keep class if you re-use elsewhere)
-.lib-scheduled{
-  margin-top: 0.45rem;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-}
-*/
 
 .lib-modal-title{
   font-family: var(--font-display);

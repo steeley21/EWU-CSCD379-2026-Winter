@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BookClubApp.Models;
 
@@ -10,7 +9,6 @@ public class GroupBook
     public int GBID { get; set; }
 
     public int GroupID { get; set; }
-    
     public int BId { get; set; }
 
     [ForeignKey("GroupID")]
@@ -18,4 +16,6 @@ public class GroupBook
 
     [ForeignKey("BId")]
     public Book Book { get; set; } = null!;
+
+    public ICollection<GroupBookReview> Reviews { get; set; } = new List<GroupBookReview>();
 }

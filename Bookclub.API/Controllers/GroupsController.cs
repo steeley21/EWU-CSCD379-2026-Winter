@@ -16,11 +16,32 @@ public class GroupsController : ControllerBase
     private readonly ApplicationDbContext _db;
     private string CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
+    private bool IsSiteAdmin => User.IsInRole("Admin");
+
+    private async Task<Group?> LoadGroupForAccess(int groupId)
+    {
+        return await _db.Groups
+            .Include(g => g.Admin)
+            .Include(g => g.UserGroups)
+            .FirstOrDefaultAsync(g => g.GroupID == groupId);
+    }
+
+    private bool CanAccessGroup(Group g)
+    {
+        if (IsSiteAdmin) return true;
+        if (g.AdminID == CurrentUserId) return true;
+
+        return g.UserGroups.Any(ug =>
+            ug.UserID == CurrentUserId &&
+            ug.Status == UserGroupStatus.Accepted);
+    }
+
     public GroupsController(ApplicationDbContext db) => _db = db;
 
     // ── Groups CRUD ───────────────────────────────────────────────────────────
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAll()
     {
         var groups = await _db.Groups
@@ -33,21 +54,25 @@ public class GroupsController : ControllerBase
                 g.Admin.FName + " " + g.Admin.LName,
                 g.UserGroups.Count(ug => ug.Status == UserGroupStatus.Accepted)))
             .ToListAsync();
+
         return Ok(groups);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var g = await _db.Groups
-            .Include(g => g.Admin)
-            .Include(g => g.UserGroups)
-            .FirstOrDefaultAsync(g => g.GroupID == id);
-
+        var g = await LoadGroupForAccess(id);
         if (g == null) return NotFound();
 
-        return Ok(new GroupDto(g.GroupID, g.GroupName, g.AdminID,
-            g.Admin.FName + " " + g.Admin.LName, g.UserGroups.Count(ug => ug.Status == UserGroupStatus.Accepted)));
+        if (!CanAccessGroup(g)) return Forbid();
+
+        return Ok(new GroupDto(
+            g.GroupID,
+            g.GroupName,
+            g.AdminID,
+            g.Admin.FName + " " + g.Admin.LName,
+            g.UserGroups.Count(ug => ug.Status == UserGroupStatus.Accepted)
+        ));
     }
 
     [HttpPost]
@@ -123,12 +148,22 @@ public class GroupsController : ControllerBase
     [HttpGet("{id}/members")]
     public async Task<IActionResult> GetMembers(int id)
     {
+        var g = await LoadGroupForAccess(id);
+        if (g == null) return NotFound();
+
+        if (!CanAccessGroup(g)) return Forbid();
+
         var members = await _db.UserGroups
             .Where(ug => ug.GroupID == id && ug.Status == UserGroupStatus.Accepted)
             .Include(ug => ug.User)
-            .Select(ug => new UserGroupDto(ug.UGID, ug.UserID,
-                ug.User.FName + " " + ug.User.LName, ug.User.UserName!))
+            .Select(ug => new UserGroupDto(
+                ug.UGID,
+                ug.UserID,
+                ug.User.FName + " " + ug.User.LName,
+                ug.User.UserName!
+            ))
             .ToListAsync();
+
         return Ok(members);
     }
 
@@ -168,13 +203,41 @@ public class GroupsController : ControllerBase
     [HttpGet("{id}/books")]
     public async Task<IActionResult> GetBooks(int id)
     {
+        // Membership check (Accepted members) OR group admin OR site Admin
+        var group = await _db.Groups.AsNoTracking().FirstOrDefaultAsync(g => g.GroupID == id);
+        if (group == null) return NotFound();
+
+        var isSiteAdmin = User.IsInRole("Admin");
+        var isGroupAdmin = group.AdminID == CurrentUserId;
+
+        var isMember = isSiteAdmin || isGroupAdmin || await _db.UserGroups.AnyAsync(ug =>
+            ug.GroupID == id &&
+            ug.UserID == CurrentUserId &&
+            ug.Status == UserGroupStatus.Accepted);
+
+        if (!isMember) return Forbid();
+
         var books = await _db.GroupBooks
             .Where(gb => gb.GroupID == id)
             .Include(gb => gb.Book)
-            .Select(gb => new GroupBookDto(gb.GBID, gb.GroupID,
-                new BookDto(gb.Book.BId, gb.Book.AuthorFirst, gb.Book.AuthorLast,
-                    gb.Book.Title, gb.Book.PublishDate, gb.Book.ISBN)))
+            .Select(gb => new GroupBookDto(
+                gb.GBID,
+                gb.GroupID,
+                new BookDto(
+                    gb.Book.BId,
+                    gb.Book.AuthorFirst,
+                    gb.Book.AuthorLast,
+                    gb.Book.Title,
+                    gb.Book.PublishDate,
+                    gb.Book.ISBN
+                ),
+                // AvgRating (null if no reviews)
+                gb.Reviews.Select(r => (decimal?)r.Rating).Average(),
+                // ReviewCount
+                gb.Reviews.Count()
+            ))
             .ToListAsync();
+
         return Ok(books);
     }
 
@@ -216,16 +279,32 @@ public class GroupsController : ControllerBase
     [HttpGet("{id}/schedule")]
     public async Task<IActionResult> GetSchedule(int id)
     {
+        var g = await LoadGroupForAccess(id);
+        if (g == null) return NotFound();
+
+        if (!CanAccessGroup(g)) return Forbid();
+
         var schedule = await _db.GroupSchedules
             .Where(gs => gs.GroupID == id)
             .Include(gs => gs.Book)
             .OrderBy(gs => gs.DateTime)
             .Select(gs => new GroupScheduleDto(
-                gs.GSID, gs.GroupID,
-                new BookDto(gs.Book.BId, gs.Book.AuthorFirst, gs.Book.AuthorLast,
-                    gs.Book.Title, gs.Book.PublishDate, gs.Book.ISBN),
-                gs.DateTime, gs.Duration, gs.Location))
+                gs.GSID,
+                gs.GroupID,
+                new BookDto(
+                    gs.Book.BId,
+                    gs.Book.AuthorFirst,
+                    gs.Book.AuthorLast,
+                    gs.Book.Title,
+                    gs.Book.PublishDate,
+                    gs.Book.ISBN
+                ),
+                gs.DateTime,
+                gs.Duration,
+                gs.Location
+            ))
             .ToListAsync();
+
         return Ok(schedule);
     }
 

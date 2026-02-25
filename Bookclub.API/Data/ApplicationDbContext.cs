@@ -15,6 +15,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<UserGroup> UserGroups => Set<UserGroup>();
     public DbSet<GroupSchedule> GroupSchedules => Set<GroupSchedule>();
 
+    public DbSet<GroupBookReview> GroupBookReviews => Set<GroupBookReview>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -48,6 +50,32 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(ug => ug.Group)
             .WithMany(g => g.UserGroups)
             .HasForeignKey(ug => ug.GroupID)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // GroupBookReview: 1 review per user per GroupBook
+        builder.Entity<GroupBookReview>()
+            .HasIndex(r => new { r.GBID, r.UserID })
+            .IsUnique();
+
+        // decimal precision: “any decimal” but store to 2dp 
+        builder.Entity<GroupBookReview>()
+            .Property(r => r.Rating)
+            .HasPrecision(4, 2);
+
+        builder.Entity<GroupBookReview>()
+            .Property(r => r.Comment)
+            .HasMaxLength(2000);
+
+        builder.Entity<GroupBookReview>()
+            .HasOne(r => r.GroupBook)
+            .WithMany(gb => gb.Reviews)
+            .HasForeignKey(r => r.GBID)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<GroupBookReview>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserID)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
