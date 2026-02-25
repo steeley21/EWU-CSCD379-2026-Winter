@@ -346,9 +346,3 @@ This keeps the repo stable for everyone.
   - ✅ Utility tests (schedule indexing)
 
 ---
-
-## Next Steps
-1. Member management UI on group profile:
-   - add member (admin) + remove member (admin/self)
-2. Add confirmation + snackbar feedback for review actions (nice UX polish).
-3. Consider persisting “added to group” timestamps in the DB if you want true “recently added” ordering.
