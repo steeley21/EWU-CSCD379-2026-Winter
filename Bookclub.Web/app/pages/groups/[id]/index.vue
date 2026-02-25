@@ -77,6 +77,14 @@
       </v-col>
     </v-row>
 
+    <!-- Forum -->
+    <div class="gp-forum-section" style="margin-top: 2.5rem;">
+      <GroupForum
+        :group-id="groupId"
+        :current-user-name="auth.fullName ?? auth.email ?? 'You'"
+      />
+    </div>
+
     <v-alert v-if="pageError" type="error" variant="tonal" class="mt-4">
       {{ pageError }}
     </v-alert>
@@ -312,6 +320,7 @@ import type { BookDto, GroupBookDto, GroupMemberDto, GroupScheduleDto, GroupSumm
 import GroupScheduleCard from '~/components/groups/GroupScheduleCard.vue'
 import GroupMembersCard from '~/components/groups/GroupMembersCard.vue'
 import GroupBooksCard from '~/components/groups/GroupBooksCard.vue'
+import GroupForum from '~/components/groups/GroupForum.vue'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -573,9 +582,8 @@ async function saveMeeting() {
     return
   }
 
-  const time = normalizeTime(meetingTime.value) ?? '19:00'
-  const localIso = `${meetingDate.value}T${time}:00`
-  const dateTimeIso = new Date(localIso).toISOString()
+    const time = normalizeTime(meetingTime.value) ?? '19:00'
+    const dateTimeIso = `${meetingDate.value}T${time}:00`
 
   meetingSaving.value = true
   try {
