@@ -4,6 +4,7 @@ using BookClubApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookClubApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260225044808_AddForum")]
+    partial class AddForum
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -251,45 +254,6 @@ namespace BookClubApp.Migrations
                         .IsUnique();
 
                     b.ToTable("GroupBooks");
-                });
-
-            modelBuilder.Entity("BookClubApp.Models.GroupBookReview", b =>
-                {
-                    b.Property<int>("ReviewId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReviewId"));
-
-                    b.Property<string>("Comment")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("GBID")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Rating")
-                        .HasPrecision(4, 2)
-                        .HasColumnType("decimal(4,2)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("ReviewId");
-
-                    b.HasIndex("UserID");
-
-                    b.HasIndex("GBID", "UserID")
-                        .IsUnique();
-
-                    b.ToTable("GroupBookReviews");
                 });
 
             modelBuilder.Entity("BookClubApp.Models.GroupSchedule", b =>
@@ -554,25 +518,6 @@ namespace BookClubApp.Migrations
                     b.Navigation("Group");
                 });
 
-            modelBuilder.Entity("BookClubApp.Models.GroupBookReview", b =>
-                {
-                    b.HasOne("BookClubApp.Models.GroupBook", "GroupBook")
-                        .WithMany("Reviews")
-                        .HasForeignKey("GBID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BookClubApp.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("GroupBook");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("BookClubApp.Models.GroupSchedule", b =>
                 {
                     b.HasOne("BookClubApp.Models.Book", "Book")
@@ -688,11 +633,6 @@ namespace BookClubApp.Migrations
                     b.Navigation("GroupSchedules");
 
                     b.Navigation("UserGroups");
-                });
-
-            modelBuilder.Entity("BookClubApp.Models.GroupBook", b =>
-                {
-                    b.Navigation("Reviews");
                 });
 #pragma warning restore 612, 618
         }

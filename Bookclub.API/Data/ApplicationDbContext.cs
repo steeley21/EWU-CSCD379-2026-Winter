@@ -14,6 +14,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GroupBook> GroupBooks => Set<GroupBook>();
     public DbSet<UserGroup> UserGroups => Set<UserGroup>();
     public DbSet<GroupSchedule> GroupSchedules => Set<GroupSchedule>();
+    public DbSet<ForumPost> ForumPosts => Set<ForumPost>();
+    public DbSet<ForumReply> ForumReplies => Set<ForumReply>();
 
     public DbSet<GroupBookReview> GroupBookReviews => Set<GroupBookReview>();
 
@@ -77,5 +79,32 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .WithMany()
             .HasForeignKey(r => r.UserID)
             .OnDelete(DeleteBehavior.Cascade);
+        // ForumPost -> Group
+        builder.Entity<ForumPost>()
+            .HasOne(p => p.Group)
+            .WithMany()
+            .HasForeignKey(p => p.GroupID)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ForumPost -> User
+        builder.Entity<ForumPost>()
+            .HasOne(p => p.User)
+            .WithMany()
+            .HasForeignKey(p => p.UserID)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // ForumReply -> ForumPost
+        builder.Entity<ForumReply>()
+            .HasOne(r => r.Post)
+            .WithMany(p => p.Replies)
+            .HasForeignKey(r => r.PostID)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ForumReply -> User
+        builder.Entity<ForumReply>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserID)
+            .OnDelete(DeleteBehavior.NoAction);
     }
 }

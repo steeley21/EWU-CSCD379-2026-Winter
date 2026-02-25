@@ -246,6 +246,14 @@ export function createGroupsService(http: AxiosInstance = api) {
     async declineInvite(inviteId: number): Promise<void> {
         await http.post(`/api/groups/invites/${inviteId}/decline`)
     },
+
+    async deleteGroup(groupId: number): Promise<void> {
+        await http.delete(`/api/groups/${groupId}`)
+    },
+
+    async leaveGroup(groupId: number): Promise<void> {
+        await http.post(`/api/groups/${groupId}/leave`)
+    },
   }
 }
 
