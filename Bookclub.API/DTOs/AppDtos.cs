@@ -60,6 +60,44 @@ public record SaveFromCatalogDto(
     int? PublishYear
 );
 
+// ── Forum ─────────────────────────────────────────────────────────
+public record ForumPostDto(
+    int FpId,
+    string Category,
+    string AuthorName,
+    string Title,
+    string Body,
+    string Preview,
+    int ReplyCount,
+    DateTime CreatedAt
+);
+
+public record ForumPostDetailDto(
+    int FpId,
+    string Category,
+    string AuthorName,
+    string Title,
+    string Body,
+    int ReplyCount,
+    DateTime CreatedAt,
+    List<ForumReplyDto> Replies
+);
+
+public record ForumReplyDto(
+    int FrId,
+    string AuthorName,
+    string Body,
+    DateTime CreatedAt
+);
+
+public record CreatePostDto(
+    string Category,
+    string Title,
+    string Body
+);
+
+public record CreateReplyDto(string Body);
+
 // ── Backfill ISBN Result ─────────────────────────────────────────────────────
 public record BackfillIsbnResultDto(
     int Checked,
