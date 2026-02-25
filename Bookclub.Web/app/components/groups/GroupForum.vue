@@ -51,15 +51,19 @@
         </div>
       </div>
 
-      <div v-if="categoryPosts.length === 0" class="forum-empty">
+      <v-progress-linear v-if="loadingPosts" indeterminate color="var(--camel)" class="mb-3" />
+
+      <div v-else-if="postsError" class="forum-error">{{ postsError }}</div>
+
+      <div v-else-if="posts.length === 0" class="forum-empty">
         <div class="forum-empty-icon">&#128218;</div>
         <div class="forum-empty-text">No posts yet - be the first!</div>
       </div>
 
       <div v-else class="forum-post-list">
         <button
-          v-for="post in categoryPosts"
-          :key="post.id"
+          v-for="post in posts"
+          :key="post.fpId"
           class="forum-post-row"
           @click="openPost(post)"
         >
@@ -106,7 +110,7 @@
       <div v-if="activePost.replies.length" class="forum-replies">
         <div
           v-for="(reply, i) in activePost.replies"
-          :key="reply.id"
+          :key="reply.frId"
           class="forum-reply"
           :style="`animation-delay: ${i * 0.04}s`"
         >
@@ -190,24 +194,8 @@
 </template>
 
 <script setup lang="ts">
-interface ForumReply {
-  id: number
-  authorName: string
-  body: string
-  createdAt: Date
-}
-
-interface ForumPost {
-  id: number
-  categoryId: string
-  authorName: string
-  title: string
-  body: string
-  preview: string
-  replyCount: number
-  createdAt: Date
-  replies: ForumReply[]
-}
+import { forumService } from '~/services/forumService'
+import type { ForumPostDto, ForumPostDetailDto } from '~/types/dtos'
 
 interface ForumCategory {
   id: string
@@ -223,142 +211,79 @@ const props = defineProps<{
 }>()
 
 const bookSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
-const calSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8" cy="15" r="0.5" fill="currentColor"/><circle cx="12" cy="15" r="0.5" fill="currentColor"/><circle cx="16" cy="15" r="0.5" fill="currentColor"/></svg>'
+const calSvg  = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8" cy="15" r="0.5" fill="currentColor"/><circle cx="12" cy="15" r="0.5" fill="currentColor"/><circle cx="16" cy="15" r="0.5" fill="currentColor"/></svg>'
 const chatSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
 
 const categories: ForumCategory[] = [
-  {
-    id: 'book',
-    name: 'Book Discussion',
-    description: 'Themes, characters, favourite passages, hot takes',
-    icon: bookSvg,
-    color: '#6d4c3d',
-  },
-  {
-    id: 'meeting',
-    name: 'Meeting Discussion',
-    description: 'Agenda, notes, follow-ups from your sessions',
-    icon: calSvg,
-    color: '#a39171',
-  },
-  {
-    id: 'general',
-    name: 'General',
-    description: 'Introductions, recommendations, anything goes',
-    icon: chatSvg,
-    color: '#8a9e6a',
-  },
+  { id: 'book',    name: 'Book Discussion',    description: 'Themes, characters, favourite passages, hot takes', icon: bookSvg, color: '#6d4c3d' },
+  { id: 'meeting', name: 'Meeting Discussion', description: 'Agenda, notes, follow-ups from your sessions',      icon: calSvg,  color: '#a39171' },
+  { id: 'general', name: 'General',            description: 'Introductions, recommendations, anything goes',     icon: chatSvg, color: '#8a9e6a' },
 ]
 
+// ── State ─────────────────────────────────────────────────────
 const activeCategory = ref<ForumCategory | null>(null)
-const activePost = ref<ForumPost | null>(null)
-const newPostOpen = ref(false)
+const activePost     = ref<ForumPostDetailDto | null>(null)
+const posts          = ref<ForumPostDto[]>([])
+const loadingPosts   = ref(false)
+const postsError     = ref('')
+
+const newPostOpen  = ref(false)
 const newPostTitle = ref('')
-const newPostBody = ref('')
-const newPostErr = ref('')
-const postSaving = ref(false)
-const replyText = ref('')
+const newPostBody  = ref('')
+const newPostErr   = ref('')
+const postSaving   = ref(false)
+
+const replyText   = ref('')
 const replySaving = ref(false)
 
-const posts = ref<ForumPost[]>([
-  {
-    id: 1,
-    categoryId: 'book',
-    authorName: 'Alex Morgan',
-    title: "What did everyone think of the ending?",
-    body: "I was completely blindsided by the final chapter. The author really pulled the rug out from under us. Did anyone see it coming? I keep thinking about the symbolism of the lighthouse -- was it hope or inevitability?",
-    preview: "I was completely blindsided by the final chapter...",
-    replyCount: 2,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3),
-    replies: [
-      {
-        id: 101,
-        authorName: 'Jamie Lee',
-        body: "Totally shocked! I had to re-read the last 20 pages. The lighthouse felt like a recurring motif for the protagonist's inner conflict.",
-        createdAt: new Date(Date.now() - 1000 * 60 * 90),
-      },
-      {
-        id: 102,
-        authorName: 'Sam Rivera',
-        body: "I suspected it around chapter 14 when she stopped mentioning her sister. Reading the lighthouse as inevitability is such a great take.",
-        createdAt: new Date(Date.now() - 1000 * 60 * 30),
-      },
-    ],
-  },
-  {
-    id: 2,
-    categoryId: 'book',
-    authorName: 'Jamie Lee',
-    title: "Favourite quote from this month's read?",
-    body: 'Mine is: "We carry the weight of the words we never said." Hits different every time. Drop yours below!',
-    preview: 'Mine is: "We carry the weight of the words we never said."',
-    replyCount: 0,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    replies: [],
-  },
-  {
-    id: 3,
-    categoryId: 'meeting',
-    authorName: 'Sam Rivera',
-    title: "Notes from last Tuesday's session",
-    body: "Great discussion everyone! Key points we landed on:\n\n- The unreliable narrator was intentional per the author's notes\n- We're split 50/50 on whether the ending was earned\n- Next month we're reading something lighter -- suggestions welcome\n\nThanks for a wonderful evening.",
-    preview: "Great discussion everyone! Key points we landed on...",
-    replyCount: 1,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48),
-    replies: [
-      {
-        id: 201,
-        authorName: 'Alex Morgan',
-        body: "Thanks for writing these up Sam! For next month I'd suggest Piranesi by Susanna Clarke -- short, magical, and very discussable.",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 47),
-      },
-    ],
-  },
-  {
-    id: 4,
-    categoryId: 'general',
-    authorName: 'Chris Park',
-    title: "Hello everyone! New member here",
-    body: "Hi all! I just joined the group and I'm so excited to be here. I've been looking for a book club for ages. I love literary fiction, historical novels, and anything with unreliable narrators. Looking forward to reading with you all!",
-    preview: "Hi all! I just joined the group and I'm so excited...",
-    replyCount: 1,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72),
-    replies: [
-      {
-        id: 301,
-        authorName: 'Jamie Lee',
-        body: "Welcome Chris! You'll fit right in -- we love a good unreliable narrator.",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 71),
-      },
-    ],
-  },
-])
-
-const categoryPosts = computed(() =>
-  posts.value
-    .filter(p => p.categoryId === activeCategory.value?.id)
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-)
+// ── Computed helpers for category list ───────────────────────
+// These use a local cache of all loaded posts for the count/activity display
+const allLoadedPosts = ref<ForumPostDto[]>([])
 
 function postCountFor(catId: string) {
-  return posts.value.filter(p => p.categoryId === catId).length
+  return allLoadedPosts.value.filter(p => p.category === catId).length
 }
 
 function lastActivityFor(catId: string) {
-  const catPosts = posts.value.filter(p => p.categoryId === catId)
+  const catPosts = allLoadedPosts.value.filter(p => p.category === catId)
   if (!catPosts.length) return 'No posts yet'
-  const latest = catPosts.slice().sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
+  const latest = catPosts.slice().sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )[0]
   return timeAgo(latest.createdAt)
 }
 
-function openCategory(cat: ForumCategory) {
+// ── Actions ───────────────────────────────────────────────────
+async function openCategory(cat: ForumCategory) {
   activeCategory.value = cat
   activePost.value = null
+  postsError.value = ''
+  loadingPosts.value = true
+  try {
+    posts.value = await forumService.getPosts(props.groupId, cat.id)
+    // merge into allLoadedPosts for the category-list stats
+    const newIds = new Set(posts.value.map(p => p.fpId))
+    allLoadedPosts.value = [
+      ...allLoadedPosts.value.filter(p => p.category !== cat.id),
+      ...posts.value,
+    ]
+  } catch (e: any) {
+    postsError.value = e?.response?.data?.message ?? e?.message ?? 'Could not load posts.'
+  } finally {
+    loadingPosts.value = false
+  }
 }
 
-function openPost(post: ForumPost) {
-  activePost.value = post
-  replyText.value = ''
+async function openPost(post: ForumPostDto) {
+  try {
+    const detail = await forumService.getPost(props.groupId, activeCategory.value!.id, post.fpId)
+    if (detail) {
+      activePost.value = detail
+      replyText.value = ''
+    }
+  } catch (e: any) {
+    postsError.value = e?.response?.data?.message ?? e?.message ?? 'Could not load post.'
+  }
 }
 
 function closePost() {
@@ -377,49 +302,47 @@ async function submitNewPost() {
   if (!newPostTitle.value.trim() || !newPostBody.value.trim()) return
   newPostErr.value = ''
   postSaving.value = true
-
-  await new Promise(r => setTimeout(r, 400))
-
-  const post: ForumPost = {
-    id: Date.now(),
-    categoryId: activeCategory.value!.id,
-    authorName: props.currentUserName || 'You',
-    title: newPostTitle.value.trim(),
-    body: newPostBody.value.trim(),
-    preview: newPostBody.value.trim().slice(0, 80) + (newPostBody.value.length > 80 ? '...' : ''),
-    replyCount: 0,
-    createdAt: new Date(),
-    replies: [],
+  try {
+    await forumService.createPost(props.groupId, activeCategory.value!.id, {
+      title: newPostTitle.value.trim(),
+      body:  newPostBody.value.trim(),
+    })
+    // refresh list
+    posts.value = await forumService.getPosts(props.groupId, activeCategory.value!.id)
+    allLoadedPosts.value = [
+      ...allLoadedPosts.value.filter(p => p.category !== activeCategory.value!.id),
+      ...posts.value,
+    ]
+    newPostOpen.value = false
+  } catch (e: any) {
+    newPostErr.value = e?.response?.data?.message ?? e?.message ?? 'Could not create post.'
+  } finally {
+    postSaving.value = false
   }
-
-  posts.value.unshift(post)
-  postSaving.value = false
-  newPostOpen.value = false
 }
 
 async function submitReply() {
   if (!replyText.value.trim() || !activePost.value) return
   replySaving.value = true
-
-  await new Promise(r => setTimeout(r, 300))
-
-  const reply: ForumReply = {
-    id: Date.now(),
-    authorName: props.currentUserName || 'You',
-    body: replyText.value.trim(),
-    createdAt: new Date(),
+  try {
+    await forumService.createReply(
+      props.groupId,
+      activeCategory.value!.id,
+      activePost.value.fpId,
+      { body: replyText.value.trim() }
+    )
+    // refresh the thread
+    const detail = await forumService.getPost(props.groupId, activeCategory.value!.id, activePost.value.fpId)
+    if (detail) activePost.value = detail
+    replyText.value = ''
+  } catch (e: any) {
+    console.error('Reply failed:', e)
+  } finally {
+    replySaving.value = false
   }
-
-  activePost.value.replies.push(reply)
-  activePost.value.replyCount++
-
-  const idx = posts.value.findIndex(p => p.id === activePost.value!.id)
-  if (idx !== -1) posts.value[idx].replyCount++
-
-  replyText.value = ''
-  replySaving.value = false
 }
 
+// ── Helpers ───────────────────────────────────────────────────
 function initials(name: string) {
   return (name ?? '?')
     .split(' ')
@@ -429,8 +352,8 @@ function initials(name: string) {
     .toUpperCase()
 }
 
-function timeAgo(date: Date) {
-  const diff = Date.now() - date.getTime()
+function timeAgo(raw: string | Date) {
+  const diff = Date.now() - new Date(raw).getTime()
   const mins  = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days  = Math.floor(diff / 86400000)
@@ -438,7 +361,7 @@ function timeAgo(date: Date) {
   if (mins < 60)  return `${mins}m ago`
   if (hours < 24) return `${hours}h ago`
   if (days < 7)   return `${days}d ago`
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return new Date(raw).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 </script>
 
@@ -516,14 +439,10 @@ function timeAgo(date: Date) {
   box-shadow: 0 4px 20px rgba(109, 76, 61, 0.1);
   transform: translateY(-1px);
 }
-.forum-cat-card:hover::before {
-  opacity: 1;
-  width: 5px;
-}
+.forum-cat-card:hover::before { opacity: 1; width: 5px; }
 .forum-cat-icon {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 44px; height: 44px;
   display: grid;
   place-items: center;
   background: rgba(220, 201, 182, 0.3);
@@ -621,11 +540,7 @@ function timeAgo(date: Date) {
   font-size: 1rem;
 }
 .forum-cat-banner-desc { font-size: 0.83rem; color: var(--text-muted); }
-.forum-post-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
+.forum-post-list { display: flex; flex-direction: column; gap: 0.6rem; }
 .forum-post-row {
   display: flex;
   align-items: flex-start;
@@ -656,10 +571,7 @@ function timeAgo(date: Date) {
   place-items: center;
   letter-spacing: 0.02em;
 }
-.forum-post-avatar--lg {
-  width: 46px; height: 46px;
-  font-size: 0.85rem;
-}
+.forum-post-avatar--lg { width: 46px; height: 46px; font-size: 0.85rem; }
 .forum-post-main { flex: 1; min-width: 0; }
 .forum-post-title {
   font-family: var(--font-display);
@@ -668,11 +580,7 @@ function timeAgo(date: Date) {
   color: var(--coffee-bean);
   margin-bottom: 0.18rem;
 }
-.forum-post-byline {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-bottom: 0.3rem;
-}
+.forum-post-byline { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.3rem; }
 .forum-post-preview {
   font-size: 0.83rem;
   color: var(--text-muted);
@@ -697,10 +605,7 @@ function timeAgo(date: Date) {
   display: grid;
   place-items: center;
 }
-.forum-reply-label {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-}
+.forum-reply-label { font-size: 0.65rem; color: var(--text-muted); }
 .forum-thread-post {
   background: var(--surface, #fdf8f4);
   border: 1.5px solid var(--border);
@@ -744,12 +649,7 @@ function timeAgo(date: Date) {
   margin-bottom: 0.75rem;
   text-transform: uppercase;
 }
-.forum-replies {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  margin-bottom: 1.25rem;
-}
+.forum-replies { display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.25rem; }
 .forum-reply {
   display: flex;
   gap: 0.75rem;
@@ -781,11 +681,7 @@ function timeAgo(date: Date) {
   align-items: center;
   margin-bottom: 0.3rem;
 }
-.forum-reply-author {
-  font-weight: 700;
-  font-size: 0.84rem;
-  color: var(--coffee-bean);
-}
+.forum-reply-author { font-weight: 700; font-size: 0.84rem; color: var(--coffee-bean); }
 .forum-reply-dot { color: var(--text-muted); font-size: 0.8rem; }
 .forum-reply-time { font-size: 0.78rem; color: var(--text-muted); }
 .forum-reply-text {
@@ -847,10 +743,7 @@ function timeAgo(date: Date) {
   transition: background 0.15s, opacity 0.15s, transform 0.12s;
   box-shadow: 0 2px 10px rgba(109, 76, 61, 0.2);
 }
-.forum-submit-btn:hover:not(:disabled) {
-  background: var(--camel);
-  transform: translateY(-1px);
-}
+.forum-submit-btn:hover:not(:disabled) { background: var(--camel); transform: translateY(-1px); }
 .forum-submit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .forum-cancel-btn {
   font-family: var(--font-body);
@@ -873,6 +766,14 @@ function timeAgo(date: Date) {
 .forum-empty--sm { padding: 1.25rem; }
 .forum-empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
 .forum-empty-text { font-size: 0.88rem; }
+.forum-error {
+  color: #b94a48;
+  background: #fff5f5;
+  border: 1px solid rgba(185, 74, 72, 0.25);
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.88rem;
+}
 .forum-overlay {
   position: fixed;
   inset: 0;

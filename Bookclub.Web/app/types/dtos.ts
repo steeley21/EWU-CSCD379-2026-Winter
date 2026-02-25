@@ -103,3 +103,24 @@ export type AdminUserDto = {
   fullName: string
   roles: string[]
 }
+export interface ForumPostDto {
+    fpId: number
+    category: string
+    authorName: string
+    title: string
+    body: string
+    preview: string
+    replyCount: number
+    createdAt: string
+}
+
+export interface ForumPostDetailDto extends ForumPostDto {
+    replies: ForumReplyDto[]
+}
+
+export interface ForumReplyDto {
+    frId: number
+    authorName: string
+    body: string
+    createdAt: string
+}
