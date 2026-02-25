@@ -79,13 +79,32 @@ export type GroupBookDto = {
   gbId: number
   groupId: number
   book: BookDto
+  avgRating?: number | null
+  reviewCount?: number
 }
+
 export interface GroupInviteDto {
     inviteId: number
     groupId: number
     groupName: string
     adminFullName: string
     memberCount: number
+}
+
+export type GroupBookReviewDto = {
+  reviewId: number
+  gbId: number
+  userId: string
+  fullName: string
+  rating: number
+  comment?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type UpsertGroupBookReviewDto = {
+  rating: number
+  comment?: string | null
 }
 
 export type CreateAdminUserRequestDto = {

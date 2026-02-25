@@ -117,11 +117,18 @@ function normalizeGroupBook(raw: AnyRec): GroupBookDto | null {
 
   if (!gbId || !groupId || !book) return null
 
+  const avgRaw = raw.avgRating ?? raw.AvgRating
+  const avgRating = avgRaw == null ? null : Number(avgRaw)
+
+  const reviewCount = toNumber(raw.reviewCount ?? raw.ReviewCount ?? 0)
+
   return {
     ...raw,
     gbId,
     groupId,
-    book, 
+    book,
+    avgRating: Number.isFinite(avgRating as number) ? (avgRating as number) : null,
+    reviewCount,
   }
 }
 

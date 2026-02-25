@@ -21,7 +21,7 @@ public record CreateGroupDto([Required] string GroupName);
 public record UpdateGroupDto([Required] string GroupName);
 
 // ── GroupBook ─────────────────────────────────────────────────────────────────
-public record GroupBookDto(int GBID, int GroupID, BookDto Book);
+public record GroupBookDto(int GBID, int GroupID, BookDto Book, decimal? AvgRating, int ReviewCount);
 
 // ── UserGroup ─────────────────────────────────────────────────────────────────
 public record UserGroupDto(int UGID, string UserID, string FullName, string Username);
@@ -104,3 +104,17 @@ public record BackfillIsbnResultDto(
     int Skipped,
     int Failed
 );
+
+// ── GroupBookReview ───────────────────────────────────────────────────────────
+public record GroupBookReviewDto(
+    int ReviewId,
+    int GBID,
+    string UserID,
+    string FullName,
+    decimal Rating,
+    string? Comment,
+    DateTime CreatedAt,
+    DateTime UpdatedAt
+);
+
+public record UpsertGroupBookReviewDto(decimal Rating, string? Comment);

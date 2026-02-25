@@ -4,6 +4,7 @@ using BookClubApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookClubApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260225070046_AddGroupBookReviews")]
+    partial class AddGroupBookReviews
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -133,76 +136,6 @@ namespace BookClubApp.Migrations
                     b.HasKey("BId");
 
                     b.ToTable("Books");
-                });
-
-            modelBuilder.Entity("BookClubApp.Models.ForumPost", b =>
-                {
-                    b.Property<int>("FpId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FpId"));
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("GroupID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("FpId");
-
-                    b.HasIndex("GroupID");
-
-                    b.HasIndex("UserID");
-
-                    b.ToTable("ForumPosts");
-                });
-
-            modelBuilder.Entity("BookClubApp.Models.ForumReply", b =>
-                {
-                    b.Property<int>("FrId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FrId"));
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("PostID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("FrId");
-
-                    b.HasIndex("PostID");
-
-                    b.HasIndex("UserID");
-
-                    b.ToTable("ForumReplies");
                 });
 
             modelBuilder.Entity("BookClubApp.Models.Group", b =>
@@ -486,44 +419,6 @@ namespace BookClubApp.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("BookClubApp.Models.ForumPost", b =>
-                {
-                    b.HasOne("BookClubApp.Models.Group", "Group")
-                        .WithMany()
-                        .HasForeignKey("GroupID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BookClubApp.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Group");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("BookClubApp.Models.ForumReply", b =>
-                {
-                    b.HasOne("BookClubApp.Models.ForumPost", "Post")
-                        .WithMany("Replies")
-                        .HasForeignKey("PostID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BookClubApp.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Post");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("BookClubApp.Models.Group", b =>
                 {
                     b.HasOne("BookClubApp.Models.ApplicationUser", "Admin")
@@ -674,11 +569,6 @@ namespace BookClubApp.Migrations
                     b.Navigation("GroupBooks");
 
                     b.Navigation("GroupSchedules");
-                });
-
-            modelBuilder.Entity("BookClubApp.Models.ForumPost", b =>
-                {
-                    b.Navigation("Replies");
                 });
 
             modelBuilder.Entity("BookClubApp.Models.Group", b =>

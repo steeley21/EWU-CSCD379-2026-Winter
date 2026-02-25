@@ -12,28 +12,30 @@ Includes DB-first book search with **OpenLibrary** fallback, plus ISBN/cover sup
 ```text
 BookClubApp/
 ├── Controllers/
-│   ├── AuthController.cs       # Register, Login → JWT
-│   ├── BooksController.cs      # Books CRUD + Search + Save-from-catalog + Admin backfill
-│   └── GroupsController.cs     # Groups, Members, Books, Schedule
+│   ├── AuthController.cs               # Register, Login → JWT
+│   ├── BooksController.cs              # Books CRUD + Search + Save-from-catalog + Admin backfill
+│   ├── GroupsController.cs             # Groups, Members, Books, Schedule (+ membership checks)
+│   └── GroupBookReviewsController.cs   # Ratings + reviews on group books
 ├── Data/
-│   ├── ApplicationDbContext.cs # EF DbContext + model config
-│   └── DataSeeder.cs           # Optional seed data (if enabled)
+│   ├── ApplicationDbContext.cs         # EF DbContext + model config
+│   └── DataSeeder.cs                   # Optional seed data (if enabled)
 ├── DTOs/
-│   ├── AuthDtos.cs             # Register/Login/Response DTOs
-│   └── AppDtos.cs              # Book, Group, Schedule DTOs
-├── Migrations/                 # EF migrations
+│   ├── AuthDtos.cs                     # Register/Login/Response DTOs
+│   └── AppDtos.cs                      # Book, Group, Schedule, Review DTOs
+├── Migrations/                         # EF migrations
 ├── Models/
-│   ├── ApplicationUser.cs      # Identity user (FName, LName)
-│   ├── Book.cs                 # Book entity
-│   ├── Group.cs                # Group entity
-│   ├── GroupBook.cs            # Group ↔ Book (GBID)
-│   ├── GroupSchedule.cs        # Group meeting schedule (GSID)
-│   └── UserGroup.cs            # User ↔ Group (UGID)
+│   ├── ApplicationUser.cs              # Identity user (FName, LName)
+│   ├── Book.cs                         # Book entity
+│   ├── Group.cs                        # Group entity
+│   ├── GroupBook.cs                    # Group ↔ Book (GBID)
+│   ├── GroupBookReview.cs              # Review for a GroupBook (1 per user)
+│   ├── GroupSchedule.cs                # Group meeting schedule (GSID)
+│   └── UserGroup.cs                    # User ↔ Group (UGID, Status)
 ├── Properties/
-│   └── launchSettings.json     # Local ports (5000/5001)
-├── Program.cs                  # DI, middleware, CORS, Swagger, optional seeding
-├── appsettings.json            # Connection string + JWT config (default)
-└── BookClubApp.csproj          # NuGet packages
+│   └── launchSettings.json             # Local ports (5000/5001)
+├── Program.cs                          # DI, middleware, CORS, Swagger, optional seeding
+├── appsettings.json                    # Connection string + JWT config (default)
+└── BookClubApp.csproj                  # NuGet packages
 ```
 
 ---
@@ -46,12 +48,12 @@ BookClubApp/
 | **User** (Identity) | Id, FName, LName, Email, Username |
 | **Group** | GroupID, GroupName, AdminID (→ User) |
 | **GroupBook** | GBID, GroupID, BId |
-| **UserGroup** | UGID, UserID, GroupID |
+| **GroupBookReview** | ReviewId, GBID, UserID, Rating, Comment, CreatedAt, UpdatedAt |
+| **UserGroup** | UGID, UserID, GroupID, Status (Accepted/Pending/Declined) |
 | **GroupSchedule** | GSID, GroupID, BId, DateTime, Duration, Location |
 
 ### Roles in use
-- `Admin`
-- `Member`
+- `Admin` (Identity Role)
 
 > “Group admin” is modeled via `Group.AdminID` (group owner), not an Identity Role.
 
@@ -133,6 +135,35 @@ Most endpoints require auth. In Swagger UI:
 
 ---
 
+## Group Membership Enforcement (important)
+Group-scoped endpoints enforce access:
+- Allowed: **Accepted** group members, **Group Admin**, or site **Admin**
+- Group admin/moderation privileges: `Group.AdminID == CurrentUserId` (or Admin role)
+
+This applies to:
+- `GET /api/groups/{id}`
+- `GET /api/groups/{id}/members`
+- `GET /api/groups/{id}/books`
+- `GET /api/groups/{id}/schedule`
+- Review endpoints under `/api/groups/{groupId}/books/{gbId}/reviews`
+
+---
+
+## Reviews & Ratings (Group Library)
+
+### Behavior
+- **One review per user per group-book** (enforced by unique index `(GBID, UserID)`)
+- Rating is stored as a decimal (precision configured in EF)
+- Comment is optional
+- Group admin and site Admin can delete (moderate) any review
+
+### Group book rating summary
+`GET /api/groups/{id}/books` returns `GroupBookDto` including:
+- `avgRating` (nullable if no reviews)
+- `reviewCount`
+
+---
+
 ## Book Search + OpenLibrary Integration
 
 ### Covers
@@ -173,21 +204,31 @@ The frontend fetches book descriptions directly from OpenLibrary (client-side) v
 ### Groups
 | Method | Route | Description |
 |---|---|---|
-| GET | `/api/groups` | All groups (auth required) |
-| GET | `/api/groups/{id}` | Single group (auth required) |
-| POST | `/api/groups` | Create group (auth required; caller becomes group admin) |
+| GET | `/api/groups` | All groups (**Admin only**) |
+| GET | `/api/groups/mine` | Groups where current user is an **Accepted** member |
+| GET | `/api/groups/{id}` | Single group (**Accepted member / group admin / Admin**) |
+| POST | `/api/groups` | Create group (caller becomes group admin + auto-joined) |
 | PUT | `/api/groups/{id}` | Rename group (group admin or Admin) |
 | DELETE | `/api/groups/{id}` | Delete group (group admin or Admin) |
-| GET | `/api/groups/{id}/members` | List members |
+| GET | `/api/groups/{id}/members` | List members (**Accepted member / group admin / Admin**) |
 | POST | `/api/groups/{id}/members/{userId}` | Add member (group admin or Admin) |
 | DELETE | `/api/groups/{id}/members/{userId}` | Remove member (group admin/self/Admin depending on endpoint rules) |
-| GET | `/api/groups/{id}/books` | Group book list |
+| GET | `/api/groups/{id}/books` | Group book list (**Accepted member / group admin / Admin**) |
 | POST | `/api/groups/{id}/books/{bookId}` | Add book to group (group admin or Admin) |
 | DELETE | `/api/groups/{id}/books/{gbId}` | Remove book from group (group admin or Admin) |
-| GET | `/api/groups/{id}/schedule` | Group schedule |
+| GET | `/api/groups/{id}/schedule` | Group schedule (**Accepted member / group admin / Admin**) |
 | POST | `/api/groups/{id}/schedule` | Add schedule entry (group admin or Admin) |
 | DELETE | `/api/groups/{id}/schedule/{gsId}` | Remove schedule entry (group admin or Admin) |
 
+### Reviews (Group Books)
+Base route: `/api/groups/{groupId}/books/{gbId}/reviews`
+
+| Method | Route | Description |
+|---|---|---|
+| GET | `/api/groups/{groupId}/books/{gbId}/reviews` | All reviews for a group-book (**member/admin**) |
+| PUT | `/api/groups/{groupId}/books/{gbId}/reviews/me` | Upsert current user’s review |
+| DELETE | `/api/groups/{groupId}/books/{gbId}/reviews/me` | Delete current user’s review |
+| DELETE | `/api/groups/{groupId}/books/{gbId}/reviews/{reviewId}` | Moderator delete (group admin or Admin) |
 
 ---
 

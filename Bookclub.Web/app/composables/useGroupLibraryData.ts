@@ -51,6 +51,7 @@ export function useGroupLibraryData() {
 
   return {
     group,
+    groupBooks,
     books,
     loading,
     pageError,

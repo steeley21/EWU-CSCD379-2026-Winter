@@ -17,6 +17,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ForumPost> ForumPosts => Set<ForumPost>();
     public DbSet<ForumReply> ForumReplies => Set<ForumReply>();
 
+    public DbSet<GroupBookReview> GroupBookReviews => Set<GroupBookReview>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -52,6 +54,31 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasForeignKey(ug => ug.GroupID)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // GroupBookReview: 1 review per user per GroupBook
+        builder.Entity<GroupBookReview>()
+            .HasIndex(r => new { r.GBID, r.UserID })
+            .IsUnique();
+
+        // decimal precision: “any decimal” but store to 2dp 
+        builder.Entity<GroupBookReview>()
+            .Property(r => r.Rating)
+            .HasPrecision(4, 2);
+
+        builder.Entity<GroupBookReview>()
+            .Property(r => r.Comment)
+            .HasMaxLength(2000);
+
+        builder.Entity<GroupBookReview>()
+            .HasOne(r => r.GroupBook)
+            .WithMany(gb => gb.Reviews)
+            .HasForeignKey(r => r.GBID)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<GroupBookReview>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserID)
+            .OnDelete(DeleteBehavior.Cascade);
         // ForumPost -> Group
         builder.Entity<ForumPost>()
             .HasOne(p => p.Group)

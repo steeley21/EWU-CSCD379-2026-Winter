@@ -25,9 +25,18 @@ export function authorLabel(book: any): string {
 export function publishDateLabel(book: any): string {
   const raw = book?.publishDate ?? book?.PublishDate
   if (!raw) return '—'
-  const t = Date.parse(String(raw))
-  if (!Number.isFinite(t)) return String(raw)
-  return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(t))
+
+  const s = String(raw).trim()
+  if (!s) return '—'
+
+  // If it's already a string that contains a year, prefer that.
+  const m = s.match(/\b(19|20)\d{2}\b/)
+  if (m) return m[0]
+
+  const t = Date.parse(s)
+  if (!Number.isFinite(t)) return s
+
+  return String(new Date(t).getFullYear())
 }
 
 export function publishYearLabel(book: any): string | null {
