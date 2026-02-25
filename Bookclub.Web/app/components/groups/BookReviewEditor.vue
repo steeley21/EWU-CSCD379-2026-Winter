@@ -1,5 +1,5 @@
 <template>
-  <v-card class="bc-card" rounded="lg" variant="outlined">
+  <v-card class="bc-card bc-static" rounded="lg" variant="outlined">
     <v-card-text>
       <div class="bre-row">
         <div class="bre-label">Stars</div>
@@ -95,7 +95,6 @@ watch(
 )
 
 watch(stars, (v) => {
-  // stars produces half-steps; keep numeric input in sync
   rating.value = v
 })
 

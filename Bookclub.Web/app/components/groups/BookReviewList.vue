@@ -8,7 +8,7 @@
       <v-card
         v-for="r in reviews"
         :key="r.reviewId"
-        class="bc-card"
+        class="bc-card bc-static"
         rounded="lg"
         variant="outlined"
       >

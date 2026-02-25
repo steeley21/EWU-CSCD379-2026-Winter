@@ -25,6 +25,18 @@
               </div>
               <div class="gp-sub">Click a book to view details.</div>
             </div>
+
+            <div class="lib-controls">
+              <v-select
+                v-model="sortMode"
+                :items="sortItems"
+                label="Sort"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+                class="lib-sort"
+              />
+            </div>
           </div>
 
           <v-card-text>
@@ -40,7 +52,7 @@
 
             <v-row v-else class="lib-grid align-stretch" dense>
               <v-col
-                v-for="gb in groupBooks"
+                v-for="gb in sortedGroupBooks"
                 :key="gb.gbId"
                 cols="12"
                 sm="6"
@@ -72,7 +84,7 @@
 
     <!-- Book details modal -->
     <v-dialog v-model="detailsOpen" max-width="820">
-      <v-card class="bc-card" rounded="lg">
+      <v-card class="bc-card bc-static" rounded="lg">
         <v-card-title class="lib-modal-title">
           {{ selectedBook?.title ?? 'Book' }}
         </v-card-title>
@@ -92,7 +104,7 @@
               </div>
 
               <div class="lib-kv">
-                <div class="lib-k">Publish date</div>
+                <div class="lib-k">Publish year</div>
                 <div class="lib-v">{{ selectedBook ? publishDateLabel(selectedBook) : '—' }}</div>
               </div>
 
@@ -147,20 +159,65 @@
             </v-alert>
 
             <div v-else>
-              <div class="mt-3" style="font-family: var(--font-display); font-weight: 800; color: var(--coffee-bean);">
+              <div class="mt-3 lib-section-head">
                 Your review
               </div>
 
-              <BookReviewEditor
-                :initial-rating="myReview?.rating ?? null"
-                :initial-comment="myReview?.comment ?? ''"
-                :saving="reviewSaving"
-                :can-delete="!!myReview"
-                @save="onSaveReview"
-                @delete="onDeleteMine"
-              />
+              <!-- Read-only view when a review exists and not editing -->
+              <div v-if="myReview && !editingMine">
+                <v-card class="bc-card bc-static" rounded="lg" variant="outlined">
+                  <v-card-text>
+                    <div class="yr-head">
+                      <div class="yr-rating">
+                        <v-rating :model-value="myReview.rating" readonly half-increments density="compact" />
+                        <span class="yr-num">{{ Number(myReview.rating).toFixed(2) }}</span>
+                      </div>
 
-              <div class="mt-4" style="font-family: var(--font-display); font-weight: 800; color: var(--coffee-bean);">
+                      <div class="yr-meta">
+                        Updated {{ formatShortDate(myReview.updatedAt) }}
+                      </div>
+                    </div>
+
+                    <div v-if="myReview.comment" class="yr-comment">
+                      {{ myReview.comment }}
+                    </div>
+
+                    <div v-else class="gp-muted gp-small">
+                      No comment.
+                    </div>
+                  </v-card-text>
+
+                  <v-card-actions>
+                    <v-spacer />
+                    <v-btn variant="text" @click="editingMine = true">Edit</v-btn>
+                    <v-btn
+                      variant="text"
+                      :disabled="reviewSaving"
+                      @click="onDeleteMine"
+                    >
+                      Delete
+                    </v-btn>
+                  </v-card-actions>
+                </v-card>
+              </div>
+
+              <!-- Edit mode -->
+              <div v-else>
+                <div v-if="myReview" class="d-flex justify-end mb-2">
+                  <v-btn variant="text" @click="editingMine = false">Cancel</v-btn>
+                </div>
+
+                <BookReviewEditor
+                  :initial-rating="myReview?.rating ?? null"
+                  :initial-comment="myReview?.comment ?? ''"
+                  :saving="reviewSaving"
+                  :can-delete="!!myReview"
+                  @save="onSaveReview"
+                  @delete="onDeleteMine"
+                />
+              </div>
+
+              <div class="mt-4 lib-section-head">
                 Member reviews
               </div>
 
@@ -202,7 +259,35 @@ const route = useRoute()
 
 const groupId = computed(() => Number(route.params.id))
 
-const { group, groupBooks, books, loading, pageError, scheduledDates, loadAll } = useGroupLibraryData()
+const { group, groupBooks, loading, pageError, scheduledDates, loadAll } = useGroupLibraryData()
+
+// Sort
+type SortMode = 'recent' | 'title' | 'author'
+const sortMode = ref<SortMode>('recent')
+const sortItems = [
+  { title: 'Recently added', value: 'recent' },
+  { title: 'Title (A–Z)', value: 'title' },
+  { title: 'Author (A–Z)', value: 'author' },
+]
+
+const sortedGroupBooks = computed<GroupBookDto[]>(() => {
+  const list = [...(groupBooks.value ?? [])]
+
+  const byTitle = (a: GroupBookDto, b: GroupBookDto) =>
+    String(a.book?.title ?? '').localeCompare(String(b.book?.title ?? ''), undefined, { sensitivity: 'base' })
+
+  const byAuthor = (a: GroupBookDto, b: GroupBookDto) =>
+    authorLabel(a.book).localeCompare(authorLabel(b.book), undefined, { sensitivity: 'base' })
+
+  if (sortMode.value === 'title') {
+    return list.sort((a, b) => byTitle(a, b) || (b.gbId - a.gbId))
+  }
+  if (sortMode.value === 'author') {
+    return list.sort((a, b) => byAuthor(a, b) || byTitle(a, b) || (b.gbId - a.gbId))
+  }
+  // recent (default): gbId desc as “recently added” proxy
+  return list.sort((a, b) => (b.gbId - a.gbId))
+})
 
 // dialog state
 const detailsOpen = ref(false)
@@ -226,6 +311,7 @@ const {
 } = useGroupBookReviews()
 
 const reviewSaving = ref(false)
+const editingMine = ref(false)
 
 const canModerate = computed(() =>
   auth.isAdmin || (!!group.value?.adminId && group.value.adminId === auth.userId)
@@ -242,6 +328,9 @@ async function openBook(gb: GroupBookDto) {
 
   if (gb.book) await loadForBook(gb.book)
   await loadReviews(groupId.value, gb.gbId)
+
+  // If user already has a review: lock by default
+  editingMine.value = !myReview.value
 }
 
 async function onSaveReview(payload: UpsertGroupBookReviewDto) {
@@ -250,12 +339,13 @@ async function onSaveReview(payload: UpsertGroupBookReviewDto) {
   try {
     await saveMine(groupId.value, selectedGb.value.gbId, payload)
 
-    // refresh summaries in grid (avg/count)
     await loadAll(groupId.value)
 
-    // re-bind selectedGb to refreshed object (so avg/count update in modal too)
     const refreshed = groupBooks.value.find(x => x.gbId === selectedGb.value?.gbId)
     if (refreshed) selectedGb.value = refreshed
+
+    // Lock after save
+    editingMine.value = false
   } finally {
     reviewSaving.value = false
   }
@@ -270,6 +360,9 @@ async function onDeleteMine() {
 
     const refreshed = groupBooks.value.find(x => x.gbId === selectedGb.value?.gbId)
     if (refreshed) selectedGb.value = refreshed
+
+    // No review now → show editor
+    editingMine.value = true
   } finally {
     reviewSaving.value = false
   }
@@ -297,6 +390,16 @@ function formatDateTime(iso: string): string {
   }).format(new Date(t))
 }
 
+function formatShortDate(iso: string): string {
+  const t = Date.parse(String(iso))
+  if (!Number.isFinite(t)) return String(iso)
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(t))
+}
+
 onMounted(async () => {
   auth.hydrate()
   const id = Number(route.params.id)
@@ -314,6 +417,7 @@ watch(detailsOpen, (open) => {
     selectedGb.value = null
     resetDesc()
     resetReviews()
+    editingMine.value = false
   }
 })
 </script>
@@ -327,6 +431,16 @@ watch(detailsOpen, (open) => {
   padding: 1rem 1rem 0.25rem;
 }
 
+.lib-controls{
+  display:flex;
+  align-items:center;
+  gap:0.75rem;
+}
+
+.lib-sort{
+  min-width: 210px;
+}
+
 .lib-title{
   font-family: var(--font-display);
   font-weight: 800;
@@ -335,10 +449,6 @@ watch(detailsOpen, (open) => {
 }
 
 .lib-grid{ margin-top: 0.25rem; }
-
-/* ─────────────────────────────────────────────
-   Grid cards: consistent size
-   ───────────────────────────────────────────── */
 
 .lib-card{
   cursor: pointer;
@@ -351,87 +461,35 @@ watch(detailsOpen, (open) => {
   height: 100%;
 }
 
-/* Cover area uses aspect-ratio frame so no cropping */
 .lib-cover{
   padding: 0.9rem 0.9rem 0.25rem;
   display:flex;
 }
 
-.lib-cover-frame{
-  width: 100%;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  background: rgba(220, 201, 182, 0.12);
-}
-
-.lib-cover-img{
-  width: 100%;
-  height: 100%;
-}
-
-/* ✅ Key fix: do not crop/zoom */
-.lib-cover-img :deep(.v-img__img){
-  object-fit: contain;
-}
-
-.lib-cover-placeholder{
-  width: 100%;
-  height: 100%;
-  border-radius: 12px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color: var(--text-muted);
-}
-
-/* Modal frame */
-.lib-modal-frame{
-  width: 100%;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  background: rgba(220, 201, 182, 0.12);
-}
-
-.lib-modal-img{
-  width: 100%;
-  height: 100%;
-}
-
-.lib-modal-img :deep(.v-img__img){
-  object-fit: contain;
-}
-
-/* Meta area: keep consistent height */
 .lib-meta{
   padding: 0.35rem 0.9rem 1rem;
   min-height: 86px;
 }
 
-/* Clamp (2 lines) — title */
 .lib-book-title{
   font-family: var(--font-display);
   font-weight: 800;
   color: var(--coffee-bean);
   line-height: 1.15;
 
-  /* fallback */
   overflow: hidden;
   text-overflow: ellipsis;
 
-  /* modern-ish clamp (works where supported) */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
-/* Clamp (1 line) — author */
 .lib-meta .gp-small{
-  /* fallback */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  /* webkit clamp (optional — doesn’t hurt) */
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
@@ -498,12 +556,46 @@ watch(detailsOpen, (open) => {
   line-height: 1.55;
 }
 
+.lib-section-head{
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--coffee-bean);
+}
+
+.yr-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:1rem;
+}
+
+.yr-rating{
+  display:flex;
+  align-items:center;
+  gap:0.4rem;
+}
+
+.yr-num{
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.yr-meta{
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.yr-comment{
+  margin-top: 0.6rem;
+  color: var(--text-base);
+  white-space: pre-wrap;
+}
+
 /* Don't let the big container card "lift" on hover */
 .lib-shell {
   transform: none !important;
 }
-
-/* bc-card likely applies hover transform globally; override it here */
 .lib-shell:hover {
   transform: none !important;
 }

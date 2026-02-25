@@ -87,10 +87,20 @@ body {
     transition: box-shadow var(--ease), transform var(--ease);
 }
 
-    .bc-card:hover {
-        box-shadow: var(--shadow-md);
-        transform: translateY(-3px);
-    }
+.bc-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+}
+
+/* ── Card: static (no hover lift) ── */
+.bc-card.bc-static{
+    transition: box-shadow var(--ease);
+}
+
+.bc-card.bc-static:hover{
+    box-shadow: var(--shadow-sm);
+    transform: none;
+}
 
 /* ── Typography ── */
 .bc-display {

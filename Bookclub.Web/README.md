@@ -74,10 +74,10 @@ dotnet run --launch-profile https
   - Stores JWT in localStorage under: `bookclub.token`
 - `/dashboard`
   - Requires login (`middleware: auth`)
-  - Shows “My Groups” (see limitations)
+  - Shows “My Groups” from `GET /api/groups/mine`
 - `/groups`
   - Requires login (`middleware: auth`)
-  - Groups browsing (and entry point to group pages)
+  - Groups browsing / entry point to group pages
 - `/groups/create`
   - Requires login (`middleware: auth`)
   - Creates a group via `POST /api/Groups`
@@ -86,7 +86,7 @@ dotnet run --launch-profile https
   - Group profile page (members, books, schedule)
 - `/groups/:id/library`
   - Requires login (`middleware: auth`)
-  - Group library page (all group books as a grid + details modal)
+  - Group library page (all group books as a grid + details modal + reviews)
 
 ### Admin Only
 - `/admin`
@@ -125,11 +125,35 @@ Frontend recognizes:
 ### Group Library: `/groups/:id/library`
 - Displays **all group books** (from `GET /api/Groups/{id}/books`) as a grid with:
   - **Cover**, **title**, **author**
+  - **Group rating summary** (average + count from member reviews)
+  - **Sort dropdown**:
+    - Recently added (uses `gbId` desc as a simple “added order” proxy)
+    - Title (A–Z)
+    - Author (A–Z)
 - Clicking a book opens a details modal:
-  - Cover, author, publish date
+  - Cover, author, **publish year**
   - Meeting dates for that book (derived from `GET /api/Groups/{id}/schedule`)
   - Description fetched **live from OpenLibrary** (client-side) via shared composable:
     - `useOpenLibraryDescription()` (includes a small in-memory cache by ISBN)
+  - **Reviews + ratings**
+    - Members can leave **one review per group-book** (editable)
+    - After save, the review locks to a read-only display until **Edit** is clicked
+    - Group Admin (group owner) and site Admin can moderate-delete reviews
+
+---
+
+## Reviews & Ratings (Frontend)
+
+### UI components
+- `BookRatingSummary.vue` — readonly average stars + average number + review count
+- `BookReviewEditor.vue` — rating + optional comment (supports any decimal input; stars are a quick half-step picker)
+- `BookReviewList.vue` — member reviews list + moderator delete button (admin/group admin only)
+
+### Services + composables
+- `app/services/reviewsService.ts` — calls review endpoints
+- `app/composables/useGroupBookReviews.ts` — review state + helpers (load/save/delete/mod delete)
+- Review-related tests:
+  - `app/services/__tests__/reviewsService.test.ts`
 
 ---
 
@@ -173,25 +197,6 @@ CI: GitHub Actions runs `npm run test:ci` before `npm run generate` so failing t
 
 ---
 
-## Current Implementation Notes / Limitations
-
-### API calls should use services (no hardcoded localhost)
-All API calls should go through `/app/services` and use the configured base URL (runtime config + axios `baseURL`).
-
-If you find hardcoded calls like:
-- `$fetch('http://localhost:5000/...')`
-
-…replace them with service calls so local/production URLs don’t break.
-
-### “My Groups” logic is temporary
-- There is no `/api/groups/mine` endpoint yet
-- Dashboard currently filters groups by `adminId` only (member groups won’t appear until the API supports it)
-
-### Group membership management UI not built yet
-- The API supports add/remove members, but the frontend currently only displays members.
-
----
-
 ## Project Structure (high level)
 
 ```text
@@ -200,8 +205,8 @@ Bookclub.Web/
 │   ├── assets/                 # global/theme CSS
 │   ├── components/
 │   │   ├── common/             # reusable components (NavBar, BookCard, BookCover, etc.)
-│   │   └── groups/             # group UI cards (Members, Books, Schedule)
-│   ├── composables/            # shared page logic (preview/books, group library, OpenLibrary, etc.)
+│   │   └── groups/             # group UI cards + review UI components
+│   ├── composables/            # shared page logic (preview/books, group library, OpenLibrary, reviews, etc.)
 │   │   └── __tests__/          # vitest composable tests
 │   ├── layouts/                # default layout
 │   ├── middleware/             # auth/admin gating
@@ -214,17 +219,17 @@ Bookclub.Web/
 │   │   │   ├── create.vue
 │   │   │   └── [id]/
 │   │   │       ├── index.vue   # group profile page
-│   │   │       └── library.vue # group library page
+│   │   │       └── library.vue # group library page (ratings + reviews)
 │   │   ├── admin/              # admin routes (books)
 │   │   ├── index.vue           # landing page
 │   │   ├── login.vue
 │   │   └── dashboard.vue
 │   ├── plugins/                # api.ts (sets axios baseURL)
-│   ├── services/               # axios services (api/auth/books/groups)
+│   ├── services/               # axios services (api/auth/books/groups/reviews)
 │   │   └── __tests__/          # vitest service tests
 │   ├── stores/                 # pinia stores (authStore)
 │   ├── types/                  # DTO typings
-│   └── utils/                  # shared helpers (covers, author label, isbn extraction, schedule indexing)
+│   └── utils/                  # shared helpers (covers, author label, isbn extraction, publish year label, schedule indexing)
 │       └── __tests__/          # vitest util tests
 ├── public/                     # favicon, robots.txt, staticwebapp.config.json
 ├── vitest.config.ts
@@ -330,19 +335,20 @@ This keeps the repo stable for everyone.
   - ✅ Add/remove group books (DB-first + OpenLibrary save-from-catalog)
   - ✅ Add/delete meetings
   - ✅ Group Library page (`/groups/:id/library`) with cover grid + details modal
+  - ✅ Reviews + ratings (avg on cards + modal editor + list + moderation)
 - ✅ Code organization
-  - ✅ Vue components used + shared components (`BookCard`, `BookCover`)
+  - ✅ Vue components used + shared components (`BookCover`)
   - ✅ API calls centralized in `/app/services`
   - ✅ Page logic refactored into composables where appropriate
 - ✅ Unit testing (Vitest)
-  - ✅ Service tests (e.g., `booksService`)
-  - ✅ Composable tests (OpenLibrary + preview detail + preview list)
+  - ✅ Service tests (books/groups/reviews)
+  - ✅ Composable tests (OpenLibrary + preview)
   - ✅ Utility tests (schedule indexing)
 
 ---
 
-## Next Steps 
-1. Members management UI on group profile:
+## Next Steps
+1. Member management UI on group profile:
    - add member (admin) + remove member (admin/self)
-2. Replace dashboard “My Groups” filtering once `/api/groups/mine` exists.
-3. Consider caching book descriptions (beyond in-memory) if OpenLibrary rate limits become an issue.
+2. Add confirmation + snackbar feedback for review actions (nice UX polish).
+3. Consider persisting “added to group” timestamps in the DB if you want true “recently added” ordering.
