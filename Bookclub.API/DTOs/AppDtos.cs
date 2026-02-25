@@ -91,7 +91,6 @@ public record ForumReplyDto(
 );
 
 public record CreatePostDto(
-    string Category,
     string Title,
     string Body
 );
