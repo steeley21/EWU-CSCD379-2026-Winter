@@ -1,3 +1,4 @@
+# Example: deploy.yml
 name: Build and deploy ASP.Net Core app to Azure Web App - bookclub-api
 
 on:
@@ -39,30 +40,6 @@ jobs:
     needs: build
 
     steps:
-      # We need the source for EF migrations
-      - uses: actions/checkout@v4
-
-      - name: Set up .NET Core
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.x'
-
-      # Install EF CLI (unless you use a dotnet tool manifest)
-      - name: Install dotnet-ef
-        run: dotnet tool install --global dotnet-ef
-
-      - name: Restore (for EF tools)
-        run: dotnet restore
-        working-directory: ./Bookclub.API
-
-      # Apply migrations to PROD DB
-      - name: Apply EF Core migrations
-        env:
-          ConnectionStrings__DefaultConnection: ${{ secrets.BOOKCLUB_PROD_SQL_CONNECTION }}
-        run: dotnet ef database update --project ./Bookclub.API --startup-project ./Bookclub.API
-        # (working-directory optional; leaving full paths avoids confusion)
-
-      # deploy artifact as before
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:

@@ -81,7 +81,7 @@
     <div class="gp-forum-section" style="margin-top: 2.5rem;">
       <GroupForum
         :group-id="groupId"
-        :current-user-name="auth.fullName ?? auth.email ?? 'You'"
+        :current-user-name="currentUserName"
       />
     </div>
 
@@ -343,6 +343,11 @@ const booksError = ref('')
 const scheduleError = ref('')
 
 const groupId = computed(() => Number(route.params.id))
+
+const currentUserName = computed(() => {
+  const me = members.value.find(m => m.userId === auth.userId)
+  return me?.fullName || auth.username || auth.email || 'You'
+})
 
 const canManage = computed(() =>
   auth.isAdmin || (!!group.value?.adminId && group.value.adminId === auth.userId)
