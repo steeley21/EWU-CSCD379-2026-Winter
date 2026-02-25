@@ -72,7 +72,7 @@ public class ForumController : ControllerBase
 
     // POST api/groups/5/forum/book
     [HttpPost("{category}")]
-    public async Task<IActionResult> CreatePost(int groupId, string category, CreatePostDto dto)
+    public async Task<IActionResult> CreatePost(int groupId, string category, [FromBody] CreatePostDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Title) || string.IsNullOrWhiteSpace(dto.Body))
             return BadRequest("Title and body are required.");
