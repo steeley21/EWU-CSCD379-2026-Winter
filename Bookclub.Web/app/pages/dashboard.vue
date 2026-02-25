@@ -51,7 +51,8 @@
         </div>
         <div class="stat-content">
           <div class="stat-label">Upcoming Meetings</div>
-          <div class="stat-value">—</div>
+          <div class="stat-value">{{ loading || loadingMeetings ? '—' : upcomingCount }}</div>
+          <div v-if="nextMeetingLabel" class="stat-sub">{{ nextMeetingLabel }}</div>
         </div>
       </div>
     </div>
@@ -60,7 +61,7 @@
     <div class="quick-actions-card">
       <h2 class="section-title">Quick Actions</h2>
       <div class="actions-grid">
-        <button class="action-tile" @click="navigateTo('/books')">
+        <button class="action-tile" @click="navigateTo('/preview/books')">
           <span class="action-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -232,7 +233,7 @@
 import '~/assets/dashboard.css'
 import { useAuthStore } from '~/stores/authStore'
 import { groupsService } from '~/services/groupsService'
-import type { GroupSummaryDto, GroupInviteDto } from '~/types/dtos'
+import type { GroupScheduleDto, GroupSummaryDto, GroupInviteDto } from '~/types/dtos'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -248,12 +249,52 @@ const showCreatedBanner = ref(false)
 const pendingInvites = ref<GroupInviteDto[]>([])
 const respondingInvite = ref<number | null>(null)
 
+// ── Meetings stat ─────────────────────────────────────────────
+const loadingMeetings = ref(false)
+const upcomingCount = ref(0)
+const nextMeeting = ref<GroupScheduleDto | null>(null)
+const nextMeetingGroupName = ref('')
+
+const nextMeetingLabel = computed(() => {
+  if (!nextMeeting.value) return ''
+  const dt = new Date(nextMeeting.value.dateTime)
+  const date = dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const time = dt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  const group = nextMeetingGroupName.value ? ` · ${nextMeetingGroupName.value}` : ''
+  return `${date} at ${time}${group}`
+})
+
+async function loadUpcomingMeetings() {
+  if (!groups.value.length) return
+  loadingMeetings.value = true
+  try {
+    const results = await Promise.allSettled(
+      groups.value.map(g =>
+        groupsService.getSchedule(g.groupId).then(schedules =>
+          schedules.map(s => ({ ...s, groupName: g.groupName }))
+        )
+      )
+    )
+    const now = new Date()
+    const upcoming = results
+      .flatMap(r => r.status === 'fulfilled' ? r.value : [])
+      .filter(s => new Date(s.dateTime) >= now)
+      .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
+
+    upcomingCount.value = upcoming.length
+    nextMeeting.value = upcoming[0] ?? null
+    nextMeetingGroupName.value = upcoming[0]?.groupName ?? ''
+  } catch { /* silent */ } finally {
+    loadingMeetings.value = false
+  }
+}
+
+// ── Groups ────────────────────────────────────────────────────
 async function loadGroups() {
   fetchError.value = ''
   loading.value = true
   try {
-    const all = await groupsService.getAll()
-    groups.value = all
+    groups.value = await groupsService.getAll()
   } catch (e) {
     fetchError.value = 'Could not load your groups. Please refresh.'
     console.error(e)
@@ -299,5 +340,6 @@ onMounted(async () => {
   }
 
   await Promise.all([loadGroups(), loadInvites()])
+  await loadUpcomingMeetings()
 })
 </script>
