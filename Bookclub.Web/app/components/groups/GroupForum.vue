@@ -363,7 +363,24 @@ function timeAgo(raw: string | Date) {
   if (hours < 24) return `${hours}h ago`
   if (days < 7)   return `${days}d ago`
   return new Date(raw).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
+ }
+
+ // ── Load all posts on mount for category stats ────────────────
+onMounted(async () => {
+  const results = await Promise.allSettled(
+    categories.map(cat => forumService.getPosts(props.groupId, cat.id))
+  )
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled') {
+      const cat = categories[i]
+      allLoadedPosts.value = [
+        ...allLoadedPosts.value.filter(p => p.category !== cat.id),
+        ...result.value,
+      ]
+    }
+  })
+})
+
 </script>
 
 <style scoped>
