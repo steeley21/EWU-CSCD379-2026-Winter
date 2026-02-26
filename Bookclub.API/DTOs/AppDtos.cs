@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using BookClubApp.Models;
 
 namespace BookClubApp.DTOs;
 
@@ -118,3 +119,23 @@ public record GroupBookReviewDto(
 );
 
 public record UpsertGroupBookReviewDto(decimal Rating, string? Comment);
+
+// ── User Library ──────────────────────────────────────────────────────────────
+
+public record UserBookDto(
+    int UbId,
+    BookDto Book,
+    ReadingStatus Status,
+    decimal? Rating,
+    DateTime AddedAt
+);
+
+public record AddToLibraryDto(
+    [Required] int BId,
+    ReadingStatus Status = ReadingStatus.WantToRead
+);
+
+public record UpdateUserBookDto(
+    [Required] ReadingStatus Status,
+    [Range(1, 5)] decimal? Rating
+);
