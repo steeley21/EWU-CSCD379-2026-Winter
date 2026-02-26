@@ -27,7 +27,8 @@
         </div>
         <div class="stat-content">
           <div class="stat-label">My Library</div>
-          <div class="stat-value">—</div>
+          <!-- CHANGE 1: was hardcoded '—', now reactive -->
+          <div class="stat-value">{{ loadingLibrary ? '—' : libraryCount }}</div>
         </div>
       </div>
 
@@ -233,6 +234,7 @@
 import '~/assets/dashboard.css'
 import { useAuthStore } from '~/stores/authStore'
 import { groupsService } from '~/services/groupsService'
+import { userLibraryService } from '~/services/userLibraryService'  // CHANGE 2: added import
 import type { GroupScheduleDto, GroupSummaryDto, GroupInviteDto } from '~/types/dtos'
 
 definePageMeta({ middleware: 'auth' })
@@ -248,6 +250,20 @@ const showCreatedBanner = ref(false)
 
 const pendingInvites = ref<GroupInviteDto[]>([])
 const respondingInvite = ref<number | null>(null)
+
+// CHANGE 3: added library stat refs + loader
+// ── Library stat ──────────────────────────────────────────────
+const loadingLibrary = ref(true)
+const libraryCount = ref(0)
+
+async function loadLibraryCount() {
+  try {
+    const books = await userLibraryService.getAll()
+    libraryCount.value = books.length
+  } catch { /* silent — stat just stays 0 */ } finally {
+    loadingLibrary.value = false
+  }
+}
 
 // ── Meetings stat ─────────────────────────────────────────────
 const loadingMeetings = ref(false)
@@ -339,7 +355,8 @@ onMounted(async () => {
     window.setTimeout(() => { showCreatedBanner.value = false }, 3000)
   }
 
-  await Promise.all([loadGroups(), loadInvites()])
+  // loadLibraryCount runs in parallel with groups/invites
+  await Promise.all([loadGroups(), loadInvites(), loadLibraryCount()])
   await loadUpcomingMeetings()
 })
 </script>
