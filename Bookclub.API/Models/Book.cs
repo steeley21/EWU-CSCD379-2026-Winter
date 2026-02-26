@@ -24,4 +24,5 @@ public class Book
     // Navigation
     public ICollection<GroupBook> GroupBooks { get; set; } = new List<GroupBook>();
     public ICollection<GroupSchedule> GroupSchedules { get; set; } = new List<GroupSchedule>();
+    public ICollection<UserBook> UserBooks { get; set; } = new List<UserBook>();
 }

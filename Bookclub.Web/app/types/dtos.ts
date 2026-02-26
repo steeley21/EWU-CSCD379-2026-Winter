@@ -143,3 +143,23 @@ export interface ForumReplyDto {
     body: string
     createdAt: string
 }
+
+export type ReadingStatus = 0 | 1 | 2   // 0=WantToRead, 1=Reading, 2=Finished
+
+export interface UserBookDto {
+    ubId: number
+    book: BookDto
+    status: ReadingStatus
+    rating: number | null
+    addedAt: string  // ISO
+}
+
+export interface AddToLibraryDto {
+    bId: number
+    status?: ReadingStatus
+}
+
+export interface UpdateUserBookDto {
+    status: ReadingStatus
+    rating: number | null
+}

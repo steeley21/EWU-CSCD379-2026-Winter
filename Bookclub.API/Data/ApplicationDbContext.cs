@@ -16,8 +16,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GroupSchedule> GroupSchedules => Set<GroupSchedule>();
     public DbSet<ForumPost> ForumPosts => Set<ForumPost>();
     public DbSet<ForumReply> ForumReplies => Set<ForumReply>();
-
     public DbSet<GroupBookReview> GroupBookReviews => Set<GroupBookReview>();
+    public DbSet<UserBook> UserBooks => Set<UserBook>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -106,5 +106,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .WithMany()
             .HasForeignKey(r => r.UserID)
             .OnDelete(DeleteBehavior.NoAction);
+
+        builder.Entity<UserBook>()
+            .HasIndex(ub => new { ub.UserID, ub.BId })
+            .IsUnique();
+
+        builder.Entity<UserBook>()
+            .Property(ub => ub.Rating)
+            .HasPrecision(3, 1);
+
+        builder.Entity<UserBook>()
+            .HasOne(ub => ub.User)
+            .WithMany()
+            .HasForeignKey(ub => ub.UserID)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<UserBook>()
+            .HasOne(ub => ub.Book)
+            .WithMany(b => b.UserBooks)
+            .HasForeignKey(ub => ub.BId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
