@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref, nextTick } from 'vue'
 
-const getByIdMock = vi.hoisted(() => vi.fn())
+const getPublicByIdMock = vi.hoisted(() => vi.fn())
 const resetMock = vi.hoisted(() => vi.fn())
 const loadForBookMock = vi.hoisted(() => vi.fn(async () => {}))
 
 vi.mock('~/services/booksService', () => ({
   booksService: {
-    getById: getByIdMock,
+    getPublicById: getPublicByIdMock,
   },
 }))
 
@@ -25,7 +25,7 @@ function flushPromises() {
 }
 
 beforeEach(() => {
-  getByIdMock.mockReset()
+  getPublicByIdMock.mockReset()
   resetMock.mockReset()
   loadForBookMock.mockReset()
 
@@ -47,8 +47,8 @@ beforeEach(() => {
 
 describe('useBookPreviewDetail', () => {
   it('loads book and calls OpenLibrary loader', async () => {
-    const book = { id: 1, title: 'Hatchet', isbn: '9780807204771' }
-    getByIdMock.mockResolvedValue(book)
+    const book = { id: 1, title: 'Hatchet', isbn: '9780807204771', avgRating: 4.0, reviewCount: 1 }
+    getPublicByIdMock.mockResolvedValue(book)
 
     const { useBookPreviewDetail } = await import('../useBookPreviewDetail')
 
@@ -59,14 +59,14 @@ describe('useBookPreviewDetail', () => {
     await nextTick()
     await flushPromises()
 
-    expect(getByIdMock).toHaveBeenCalledWith(1)
+    expect(getPublicByIdMock).toHaveBeenCalledWith(1)
     expect(resetMock).toHaveBeenCalled()
     expect(loadForBookMock).toHaveBeenCalledWith(book)
     expect(state.book.value?.id).toBe(1)
   })
 
   it('sets notFound + pageError on 404 and does not call OpenLibrary loader', async () => {
-    getByIdMock.mockRejectedValue({ response: { status: 404 } })
+    getPublicByIdMock.mockRejectedValue({ response: { status: 404 } })
 
     const { useBookPreviewDetail } = await import('../useBookPreviewDetail')
 
