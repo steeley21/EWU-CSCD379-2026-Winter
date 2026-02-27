@@ -43,79 +43,111 @@ public class BooksController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetPublicAll()
     {
-        // Flatten reviews -> (ReviewId, BId, UserID, Rating, UpdatedAt)
+        // 1) Load books (base list)
+        var books = await _db.Books.AsNoTracking()
+            .Select(b => new
+            {
+                b.BId,
+                b.AuthorFirst,
+                b.AuthorLast,
+                b.Title,
+                b.PublishDate,
+                b.ISBN
+            })
+            .ToListAsync();
+
+        // 2) Flatten reviews -> (ReviewId, BId, UserID, Rating, Stamp)
+        // NOTE: EF.Property<T?> prevents "Nullable object must have a value" if legacy rows contain NULLs.
         var baseReviews =
             from r in _db.GroupBookReviews.AsNoTracking()
             join gb in _db.GroupBooks.AsNoTracking() on r.GBID equals gb.GBID
+            let updated = EF.Property<DateTime?>(r, nameof(GroupBookReview.UpdatedAt))
+            let created = EF.Property<DateTime?>(r, nameof(GroupBookReview.CreatedAt))
+            let stamp = updated ?? created ?? new DateTime(2000, 1, 1)
+            let rating = EF.Property<decimal?>(r, nameof(GroupBookReview.Rating))
             select new
             {
                 r.ReviewId,
                 gb.BId,
                 r.UserID,
-                r.Rating,
-                r.UpdatedAt
+                Rating = rating ?? 0m,
+                Stamp = stamp
             };
 
-        // 1) max UpdatedAt per (BId, UserID)
-        var maxUpdated =
+        // 3) max Stamp per (BId, UserID)
+        var maxStamp =
             from x in baseReviews
             group x by new { x.BId, x.UserID } into g
             select new
             {
                 g.Key.BId,
                 g.Key.UserID,
-                MaxUpdatedAt = g.Max(v => v.UpdatedAt)
+                MaxStamp = g.Max(v => v.Stamp)
             };
 
-        // 2) candidates that match max UpdatedAt
+        // 4) candidates matching max Stamp
         var candidates =
             from x in baseReviews
-            join mu in maxUpdated
-                on new { x.BId, x.UserID, UpdatedAt = x.UpdatedAt }
-                equals new { mu.BId, mu.UserID, UpdatedAt = mu.MaxUpdatedAt }
+            join ms in maxStamp
+                on new { x.BId, x.UserID, Stamp = x.Stamp }
+                equals new { ms.BId, ms.UserID, Stamp = ms.MaxStamp }
             select x;
 
-        // 3) tie-break: max ReviewId for those candidates
+        // 5) tie-break by max ReviewId
         var latestIds =
             from c in candidates
             group c by new { c.BId, c.UserID } into g
             select g.Max(v => v.ReviewId);
 
-        // 4) latest deduped reviews (one per user per book)
+        // 6) latest deduped set (one per user per book)
         var latestPerUserBook =
             from x in baseReviews
             join id in latestIds on x.ReviewId equals id
             select x;
 
-        // Aggregate per book (IMPORTANT: make fields nullable for LEFT JOIN safety)
-        var ratingByBook =
-            from x in latestPerUserBook
-            group x by x.BId into g
-            select new
+        // 7) Aggregate per book
+        var ratingByBook = await latestPerUserBook
+            .GroupBy(x => x.BId)
+            .Select(g => new
             {
                 BId = g.Key,
-                ReviewCount = (int?)g.Count(),
-                AvgRating = (decimal?)g.Average(v => v.Rating)
-            };
+                ReviewCount = g.Count(),
+                AvgRating = g.Average(v => v.Rating)
+            })
+            .ToListAsync();
 
-        // Left join books -> rating summary
-        var query =
-            from b in _db.Books.AsNoTracking()
-            join s in ratingByBook on b.BId equals s.BId into sj
-            from s in sj.DefaultIfEmpty()
-            select new PublicBookDto(
+        var ratingMap = ratingByBook.ToDictionary(x => x.BId, x => x);
+
+        // 8) Merge in memory
+        var result = books.Select(b =>
+        {
+            if (ratingMap.TryGetValue(b.BId, out var r))
+            {
+                return new PublicBookDto(
+                    b.BId,
+                    b.AuthorFirst,
+                    b.AuthorLast,
+                    b.Title,
+                    b.PublishDate,
+                    b.ISBN,
+                    (decimal?)r.AvgRating,
+                    r.ReviewCount
+                );
+            }
+
+            return new PublicBookDto(
                 b.BId,
                 b.AuthorFirst,
                 b.AuthorLast,
                 b.Title,
                 b.PublishDate,
                 b.ISBN,
-                s == null ? (decimal?)null : s.AvgRating,
-                s == null ? 0 : (s.ReviewCount ?? 0)
+                null,
+                0
             );
+        }).ToList();
 
-        var list = await query.ToListAsync();
-        return Ok(list);
+        return Ok(result);
     }
 
     [HttpGet("public/{id}")]
