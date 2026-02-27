@@ -12,7 +12,7 @@ export function useBooksPreview() {
 
   const { data, pending, error, refresh } = useAsyncData<BookDto[]>(
     'preview-books',
-    () => booksService.getAll(),
+    () => booksService.getPublicAll(),
     { server: false }
   )
 

@@ -192,23 +192,12 @@ const auth = useAuthStore()
 auth.hydrate()
 
 const { data, pending, error } = await useAsyncData<BookDto[]>(
-  'books',
-  () => booksService.getAll(),
+  'featured-books',
+  () => booksService.getFeatured(6),
   { server: false }
 )
 
-const featured = computed(() => {
-  const books = data.value ?? []
-  const sorted = [...books].sort((a, b) => {
-    const da = Date.parse(String(a.createdAt ?? ''))
-    const db = Date.parse(String(b.createdAt ?? ''))
-    const aValid = Number.isFinite(da)
-    const bValid = Number.isFinite(db)
-    if (aValid && bValid) return db - da
-    return Number(b.id ?? 0) - Number(a.id ?? 0)
-  })
-  return sorted.slice(0, 6)
-})
+const featured = computed(() => data.value ?? [])
 </script>
 
 <style src="~/assets/index.css" />

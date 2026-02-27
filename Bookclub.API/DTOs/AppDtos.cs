@@ -14,6 +14,31 @@ public record CreateBookDto(
     string? ISBN
 );
 
+// ── Public Book Rating (aggregate across all groups) ──────────────────────────
+public record PublicBookDto(
+    int BId,
+    string AuthorFirst,
+    string AuthorLast,
+    string Title,
+    DateTime? PublishDate,
+    string? ISBN,
+    decimal? AvgRating,
+    int ReviewCount
+);
+
+public record FeaturedBookDto(
+    int BId,
+    string AuthorFirst,
+    string AuthorLast,
+    string Title,
+    DateTime? PublishDate,
+    string? ISBN,
+    decimal? AvgRating,
+    int ReviewCount,
+    string? LatestCommentPreview,
+    string? LatestCommentFirstName
+);
+
 // ── Group ─────────────────────────────────────────────────────────────────────
 public record GroupDto(int GroupID, string GroupName, string AdminID, string AdminFullName, int MemberCount);
 

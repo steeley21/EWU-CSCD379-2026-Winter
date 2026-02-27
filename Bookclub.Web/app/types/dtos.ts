@@ -33,6 +33,14 @@ export type BookDto = {
   publishDate?: string
   isbn?: string
 
+  // public aggregate rating (from /api/books/public*)
+  avgRating?: number | null
+  reviewCount?: number
+
+  // landing featured comment (from /api/books/featured)
+  latestCommentPreview?: string | null
+  latestCommentFirstName?: string | null
+
   [k: string]: unknown
 }
 

@@ -12,6 +12,12 @@
       <div class="header">
         <div class="eyebrow">Preview</div>
         <h1 class="title">{{ String(book.title ?? 'Untitled') }}</h1>
+        <div class="mt-2">
+          <BookRatingSummary
+            :avg="book.avgRating ?? null"
+            :count="book.reviewCount ?? 0"
+          />
+        </div>
         <p class="sub">{{ authorLabel(book) }}</p>
       </div>
 
@@ -61,6 +67,7 @@
 import { useBookPreviewDetail } from '~/composables/useBookPreviewDetail'
 import { authorLabel, extractIsbn, publishYearLabel } from '~/utils/books'
 import BookCover from '~/components/common/BookCover.vue'
+import BookRatingSummary from '~/components/groups/BookRatingSummary.vue'
 
 const route = useRoute()
 const bookId = computed(() => Number(route.params.id))
